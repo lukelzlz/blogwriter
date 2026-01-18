@@ -1,12 +1,14 @@
 import { handleAuth } from './auth';
 import { handlePosts } from './posts';
 import { handleRepo } from './github';
+import { getAssetFromKV } from '@cloudflare/kv-asset-handler';
 
 export interface Env {
   SESSIONS: KVNamespace;
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;
   GITHUB_REDIRECT_URI: string;
+  ASSETS?: any;
 }
 
 export default {
@@ -41,13 +43,34 @@ export default {
         return handleRepo(request, env, ctx, corsHeaders);
       }
 
-      // For all other paths, let Workers Sites handle static files
-      // This includes '/', '/assets/*', and any other static assets
-      // Workers Sites will automatically serve files from the ./dist bucket
-      return new Response(null, {
-        status: 404,
-        headers: corsHeaders,
-      });
+      // Serve static files using Workers Sites
+      try {
+        return await getAssetFromKV(
+          {
+            request,
+            waitUntil: ctx.waitUntil.bind(ctx),
+          },
+          {
+            cacheControl: {
+              browserTTL: 60 * 60 * 24 * 365, // 1 year
+              edgeTTL: 60 * 60 * 24 * 365, // 1 year
+              bypassCache: false,
+            },
+          }
+        );
+      } catch (e: any) {
+        // If asset not found, serve index.html for SPA routing
+        if (e.message && e.message.includes('Could not find')) {
+          const indexRequest = new Request(`${url.origin}/index.html`, request);
+          return await getAssetFromKV(
+            {
+              request: indexRequest,
+              waitUntil: ctx.waitUntil.bind(ctx),
+            }
+          );
+        }
+        throw e;
+      }
     } catch (error) {
       console.error('Error handling request:', error);
       return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
