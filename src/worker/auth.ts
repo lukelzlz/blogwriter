@@ -5,6 +5,15 @@ import type { UserSession, GitHubUser } from '$shared/types';
 const GITHUB_OAUTH_URL = 'https://github.com/login/oauth';
 const GITHUB_API_URL = 'https://api.github.com';
 
+// GitHub OAuth Token 响应类型
+interface GitHubTokenResponse {
+  access_token?: string;
+  token_type?: string;
+  scope?: string;
+  error?: string;
+  error_description?: string;
+}
+
 // 生成随机 state 用于 CSRF 保护
 function generateState(): string {
   const array = new Uint8Array(16);
@@ -88,10 +97,14 @@ async function exchangeCodeForToken(code: string, env: Env): Promise<string> {
     }),
   });
   
-  const data = await response.json();
+  const data: GitHubTokenResponse = await response.json();
   
   if (data.error) {
     throw new Error(`GitHub OAuth error: ${data.error}`);
+  }
+  
+  if (!data.access_token) {
+    throw new Error('Failed to get access token from GitHub');
   }
   
   return data.access_token;
@@ -162,8 +175,11 @@ export async function handleAuth(
   if (path === '/auth/github' && request.method === 'GET') {
     try {
       const authUrl = await getGitHubAuthUrl(env);
-      // 直接重定向到 GitHub OAuth 页面
-      return Response.redirect(authUrl, 302);
+      // 返回JSON响应，让前端处理重定向
+      return new Response(JSON.stringify({ url: authUrl }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
     } catch (error) {
       return new Response(JSON.stringify({ error: 'Failed to generate auth URL' }), {
         status: 500,
