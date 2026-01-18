@@ -91,6 +91,11 @@ async function getGitHubAuthUrl(env: Env): Promise<string> {
 
 // 用 code 换取 access_token
 async function exchangeCodeForToken(code: string, env: Env): Promise<string> {
+  console.log('🔍 [Token Exchange Debug] 开始交换 code...');
+  console.log('  - Client ID:', env.GITHUB_CLIENT_ID);
+  console.log('  - Client Secret:', env.GITHUB_CLIENT_SECRET ? '已配置' : '未配置');
+  console.log('  - Code:', code.substring(0, 10) + '...');
+  
   const response = await fetch(`${GITHUB_OAUTH_URL}/access_token`, {
     method: 'POST',
     headers: {
@@ -104,21 +109,35 @@ async function exchangeCodeForToken(code: string, env: Env): Promise<string> {
     }),
   });
   
+  console.log('  - GitHub 响应状态:', response.status, response.statusText);
+  
   const data: GitHubTokenResponse = await response.json();
   
+  console.log('  - GitHub 响应数据:', JSON.stringify(data, null, 2));
+  
   if (data.error) {
-    throw new Error(`GitHub OAuth error: ${data.error}`);
+    console.error('❌ [Token Exchange Error] GitHub 返回错误');
+    console.error('  - 错误:', data.error);
+    if (data.error_description) {
+      console.error('  - 错误描述:', data.error_description);
+    }
+    throw new Error(`GitHub OAuth error: ${data.error}${data.error_description ? ` - ${data.error_description}` : ''}`);
   }
   
   if (!data.access_token) {
+    console.error('❌ [Token Exchange Error] 响应中缺少 access_token');
     throw new Error('Failed to get access token from GitHub');
   }
   
+  console.log('✅ [Token Exchange Debug] 成功获取 access_token');
   return data.access_token;
 }
 
 // 获取用户信息
 async function getGitHubUser(accessToken: string): Promise<GitHubUser> {
+  console.log('🔍 [User Info Debug] 开始获取用户信息...');
+  console.log('  - Access Token:', accessToken.substring(0, 10) + '...');
+  
   const response = await fetch(`${GITHUB_API_URL}/user`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -126,11 +145,23 @@ async function getGitHubUser(accessToken: string): Promise<GitHubUser> {
     },
   });
   
+  console.log('  - GitHub API 响应状态:', response.status, response.statusText);
+  
   if (!response.ok) {
-    throw new Error('Failed to fetch user info');
+    console.error('❌ [User Info Error] 获取用户信息失败');
+    console.error('  - 响应状态:', response.status);
+    const errorText = await response.text();
+    console.error('  - 响应内容:', errorText);
+    throw new Error(`Failed to fetch user info: ${response.status} ${response.statusText}`);
   }
   
-  return response.json();
+  const user: GitHubUser = await response.json();
+  console.log('✅ [User Info Debug] 成功获取用户信息');
+  console.log('  - 用户登录名:', user.login);
+  console.log('  - 用户 ID:', user.id);
+  console.log('  - 用户名:', user.name);
+  
+  return user;
 }
 
 // 创建会话
@@ -200,34 +231,68 @@ export async function handleAuth(
     const code = url.searchParams.get('code');
     const state = url.searchParams.get('state');
 
+    // 🔍 调试日志：记录回调参数
+    console.log('🔍 [OAuth Callback Debug] 收到回调请求');
+    console.log('  - Code:', code ? `${code.substring(0, 10)}...` : 'null');
+    console.log('  - State:', state ? `${state.substring(0, 10)}...` : 'null');
+    console.log('  - 完整 URL:', url.toString());
+
     if (!code || !state) {
+      console.error('❌ [OAuth Callback Error] 缺少 code 或 state 参数');
       return new Response('Missing code or state', { status: 400 });
     }
 
     try {
-      // 验证 state
+      // 🔍 调试日志：开始验证 state
+      console.log('🔍 [OAuth Callback Debug] 步骤 1: 验证 state...');
       const stateData = await env.SESSIONS.get(`oauth_state:${state}`);
+      console.log('  - State 存在:', !!stateData);
+      if (stateData) {
+        console.log('  - State 数据:', stateData);
+      }
+      
       if (!stateData) {
+        console.error('❌ [OAuth Callback Error] State 验证失败 - state 不存在于 KV 存储中');
         return new Response('Invalid state', { status: 400 });
       }
       await env.SESSIONS.delete(`oauth_state:${state}`);
+      console.log('✅ [OAuth Callback Debug] State 验证成功');
 
-      // 换取 access_token
+      // 🔍 调试日志：开始交换 code
+      console.log('🔍 [OAuth Callback Debug] 步骤 2: 交换 code 获取 access_token...');
       const accessToken = await exchangeCodeForToken(code, env);
+      console.log('  - Access Token:', accessToken ? `${accessToken.substring(0, 10)}...` : 'null');
+      console.log('✅ [OAuth Callback Debug] Code 交换成功');
 
-      // 获取用户信息
+      // 🔍 调试日志：获取用户信息
+      console.log('🔍 [OAuth Callback Debug] 步骤 3: 获取用户信息...');
       const user = await getGitHubUser(accessToken);
+      console.log('  - 用户:', user.login);
+      console.log('✅ [OAuth Callback Debug] 用户信息获取成功');
 
-      // 创建会话
+      // 🔍 调试日志：创建会话
+      console.log('🔍 [OAuth Callback Debug] 步骤 4: 创建会话...');
       const sessionId = await createSession(env, user, accessToken);
+      console.log('  - Session ID:', sessionId);
+      console.log('✅ [OAuth Callback Debug] 会话创建成功');
 
       // 重定向到前端，带上 session ID
       // 使用硬编码的前端 URL，而不是请求的 origin
       const frontendUrl = 'https://writer.qwqc.cc';
-      return Response.redirect(`${frontendUrl}/?session=${sessionId}`, 302);
+      const redirectUrl = `${frontendUrl}/?session=${sessionId}`;
+      console.log('🔍 [OAuth Callback Debug] 步骤 5: 重定向到前端');
+      console.log('  - 重定向 URL:', redirectUrl);
+      console.log('✅ [OAuth Callback Debug] OAuth 流程完成');
+      return Response.redirect(redirectUrl, 302);
     } catch (error) {
-      console.error('OAuth callback error:', error);
-      return new Response('Authentication failed', { status: 500 });
+      console.error('❌ [OAuth Callback Error] OAuth 回调失败');
+      console.error('  - 错误类型:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('  - 错误消息:', error instanceof Error ? error.message : String(error));
+      if (error instanceof Error && error.stack) {
+        console.error('  - 错误堆栈:', error.stack);
+      }
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return new Response(`Authentication failed: ${errorMessage}`, { status: 500 });
     }
   }
 
