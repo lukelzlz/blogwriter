@@ -8,6 +8,17 @@
 
   export let navigate: (path: string) => void = () => {};
   let loading = false;
+  let hasLoaded = false;
+
+  async function loadPostsIfNeeded() {
+    if (hasLoaded) return;
+
+    if ($auth.isAuthenticated && $auth.repo) {
+      console.log('[DEBUG] Loading posts (auth state ready)');
+      await loadPosts();
+      hasLoaded = true;
+    }
+  }
 
   onMount(async () => {
     console.log('[DEBUG] onMount called');
@@ -15,12 +26,14 @@
     console.log('[DEBUG] repo:', $auth.repo);
     console.log('[DEBUG] postsPath:', $auth.postsPath);
 
-    if ($auth.isAuthenticated) {
-      await loadPosts();
-    } else {
-      console.log('[DEBUG] Not authenticated, skipping loadPosts');
-    }
+    await loadPostsIfNeeded();
   });
+
+  // 响应式监听 auth 状态变化
+  $: if ($auth.isAuthenticated && $auth.repo) {
+    console.log('[DEBUG] Auth state changed, checking if posts need to be loaded');
+    loadPostsIfNeeded();
+  }
 
   async function loadPosts() {
     if (!$auth.repo) {
