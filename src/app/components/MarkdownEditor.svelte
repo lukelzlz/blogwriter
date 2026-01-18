@@ -38,8 +38,10 @@
           },
         }),
         EditorView.updateListener.of((update) => {
+          console.log('[MarkdownEditor] Update listener called, docChanged:', update.docChanged, 'isInternalUpdate:', isInternalUpdate);
           if (update.docChanged && !isInternalUpdate) {
             const newContent = view.state.doc.toString();
+            console.log('[MarkdownEditor] Content changed, calling onChange');
             if (onChange) {
               onChange(newContent);
             }
@@ -59,6 +61,7 @@
 
   // 外部内容更新时同步到编辑器
   $: if (view && content !== undefined && content !== view.state.doc.toString()) {
+    console.log('[MarkdownEditor] External content update detected');
     isInternalUpdate = true;
     const transaction = view.state.update({
       changes: {

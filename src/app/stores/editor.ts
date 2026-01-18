@@ -46,6 +46,7 @@ function createEditorStore() {
 
   // 更新内容
   function setContent(content: string) {
+    console.log('[Editor Store] setContent called, length:', content?.length || 0);
     update((state) => ({
       ...state,
       content,
