@@ -41,17 +41,13 @@ export default {
         return handleRepo(request, env, ctx, corsHeaders);
       }
 
-      // Serve static files for production
-      if (path === '/' || path.startsWith('/assets')) {
-        // In production, these would be served from the static bucket
-        // For now, return a simple response
-        return new Response('Hexo Blog Manager - Frontend not yet deployed', {
-          headers: { 'Content-Type': 'text/html', ...corsHeaders },
-        });
-      }
-
-      // 404
-      return new Response('Not Found', { status: 404, headers: corsHeaders });
+      // For all other paths, let Workers Sites handle static files
+      // This includes '/', '/assets/*', and any other static assets
+      // Workers Sites will automatically serve files from the ./dist bucket
+      return new Response(null, {
+        status: 404,
+        headers: corsHeaders,
+      });
     } catch (error) {
       console.error('Error handling request:', error);
       return new Response(JSON.stringify({ error: 'Internal Server Error' }), {

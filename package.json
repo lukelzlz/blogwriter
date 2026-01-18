@@ -13,8 +13,9 @@
     "wrangler:dev": "wrangler dev src/worker/index.ts --local"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^3.0.0",
+    "@cloudflare/workers-types": "^4.20260118.0",
     "@skeletonlabs/skeleton": "^2.10.0",
+    "@sveltejs/vite-plugin-svelte": "^3.0.0",
     "@types/node": "^22.0.0",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
