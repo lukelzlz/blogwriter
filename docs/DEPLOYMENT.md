@@ -90,7 +90,7 @@ wrangler secret put GITHUB_CLIENT_SECRET
 ### 3.6 创建预览环境（可选）
 
 ```bash
-wrangler kv:namespace create SESSIONS --preview
+wrangler kv namespace create SESSIONS --preview
 ```
 
 将输出的 `id` 更新到 `wrangler.toml` 的 `preview_id` 字段。
