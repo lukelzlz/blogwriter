@@ -72,11 +72,13 @@ export const authApi = {
 // 文章 API
 export const postsApi = {
   // 获取文章列表
-  async getList(params?: { path?: string; branch?: string }) {
+  async getList(params?: { path?: string; branch?: string; owner?: string; repo?: string }) {
     const queryParams = new URLSearchParams();
     if (params?.path) queryParams.set('path', params.path);
     if (params?.branch) queryParams.set('branch', params.branch);
-    
+    if (params?.owner) queryParams.set('owner', params.owner);
+    if (params?.repo) queryParams.set('repo', params.repo);
+
     return request<Post[]>(`/api/posts?${queryParams.toString()}`);
   },
 

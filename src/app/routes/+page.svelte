@@ -57,6 +57,8 @@
       const response = await postsApi.getList({
         path: postsPath,
         branch: branch,
+        owner: $auth.repo.owner,
+        repo: $auth.repo.name,
       });
 
       console.log('[DEBUG] API response:', response);
@@ -65,9 +67,11 @@
       console.log('[DEBUG] Response error:', response.error);
 
       if (response.success && response.data) {
-        console.log('[DEBUG] Posts loaded successfully, count:', response.data.length);
-        console.log('[DEBUG] Posts details:', response.data);
-        posts.setPosts(response.data);
+        // 处理后端返回的数据结构：{data: {data: Array}}
+        const postsData = Array.isArray(response.data) ? response.data : response.data.data;
+        console.log('[DEBUG] Posts loaded successfully, count:', postsData?.length);
+        console.log('[DEBUG] Posts details:', postsData);
+        posts.setPosts(postsData || []);
       } else {
         console.error('[DEBUG] API returned error:', response.error);
         posts.setError(response.error || '加载文章失败');
