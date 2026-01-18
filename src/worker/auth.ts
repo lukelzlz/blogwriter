@@ -162,9 +162,8 @@ export async function handleAuth(
   if (path === '/auth/github' && request.method === 'GET') {
     try {
       const authUrl = await getGitHubAuthUrl(env);
-      return new Response(JSON.stringify({ url: authUrl }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      // 直接重定向到 GitHub OAuth 页面
+      return Response.redirect(authUrl, 302);
     } catch (error) {
       return new Response(JSON.stringify({ error: 'Failed to generate auth URL' }), {
         status: 500,
