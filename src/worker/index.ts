@@ -5,10 +5,10 @@ import { getAssetFromKV } from '@cloudflare/kv-asset-handler';
 
 export interface Env {
   SESSIONS: KVNamespace;
+  ASSETS: KVNamespace;
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;
   GITHUB_REDIRECT_URI: string;
-  ASSETS?: any;
 }
 
 export default {
@@ -73,8 +73,15 @@ export default {
             );
           } catch (indexError: any) {
             console.error('Index fetch error:', indexError);
-            throw new Error('Could not serve index.html');
+            return new Response('Not Found', { status: 404, headers: corsHeaders });
           }
+        }
+        // If no ASSETS binding is available, return error
+        if (e.message && e.message.includes('no KV namespace bound')) {
+          return new Response('Static assets not available. Please ensure Workers Sites is properly configured.', {
+            status: 500,
+            headers: { 'Content-Type': 'text/plain', ...corsHeaders },
+          });
         }
         throw e;
       }

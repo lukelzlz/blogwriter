@@ -11,6 +11,12 @@ binding = "SESSIONS"
 id = "2ccd8aaba9c44ae4a5bd9b88d1e29d71"
 preview_id = "3a5840be829b483c95327beb446df256"
 
+# KV Namespace for static assets (Workers Sites)
+[[kv_namespaces]]
+binding = "ASSETS"
+id = "2ccd8aaba9c44ae4a5bd9b88d1e29d71"
+preview_id = "3a5840be829b483c95327beb446df256"
+
 # Environment variables
 [vars]
 GITHUB_CLIENT_ID = "Ov23lif971sKaprYiDUw"
