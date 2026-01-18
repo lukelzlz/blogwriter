@@ -79,6 +79,13 @@ async function getGitHubAuthUrl(env: Env): Promise<string> {
     state: state,
   });
   
+  // 🔍 调试日志：记录 OAuth 配置
+  console.log('🔍 [OAuth Debug] GitHub OAuth 配置:');
+  console.log('  - Client ID:', env.GITHUB_CLIENT_ID);
+  console.log('  - Redirect URI:', env.GITHUB_REDIRECT_URI);
+  console.log('  - State:', state);
+  console.log('  - 完整 URL:', `${GITHUB_OAUTH_URL}/authorize?${params.toString()}`);
+  
   return `${GITHUB_OAUTH_URL}/authorize?${params.toString()}`;
 }
 
