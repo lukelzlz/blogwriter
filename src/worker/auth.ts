@@ -140,7 +140,8 @@ async function getGitHubUser(accessToken: string): Promise<GitHubUser> {
   
   const response = await fetch(`${GITHUB_API_URL}/user`, {
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
+      'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
     },
   });

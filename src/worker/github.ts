@@ -11,7 +11,8 @@ export async function getRepoInfo(
 ): Promise<GitHubRepo> {
   const response = await fetch(`${GITHUB_API_URL}/repos/${owner}/${repo}`, {
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
+      'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
     },
   });
@@ -31,7 +32,8 @@ export async function getRepoBranches(
 ): Promise<Array<{ name: string; commit: { sha: string } }>> {
   const response = await fetch(`${GITHUB_API_URL}/repos/${owner}/${repo}/branches`, {
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
+      'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
     },
   });
@@ -58,7 +60,8 @@ export async function getDirectoryContents(
 
   const response = await fetch(url.toString(), {
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
+      'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
     },
   });
@@ -85,7 +88,8 @@ export async function getFileContent(
 
   const response = await fetch(url.toString(), {
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
+      'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
     },
   });
@@ -132,7 +136,8 @@ export async function createOrUpdateFile(
   const response = await fetch(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${path}`, {
     method: 'PUT',
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
+      'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     },
@@ -169,7 +174,8 @@ export async function deleteFile(
   const response = await fetch(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${path}`, {
     method: 'DELETE',
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
+      'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     },
