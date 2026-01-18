@@ -45,7 +45,7 @@ export default {
 
       // Serve static files using Workers Sites
       try {
-        return await getAssetFromKV(
+        const asset = await getAssetFromKV(
           {
             request,
             waitUntil: ctx.waitUntil.bind(ctx),
@@ -58,22 +58,29 @@ export default {
             },
           }
         );
+        return asset;
       } catch (e: any) {
+        console.error('Asset fetch error:', e);
         // If asset not found, serve index.html for SPA routing
-        if (e.message && e.message.includes('Could not find')) {
-          const indexRequest = new Request(`${url.origin}/index.html`, request);
-          return await getAssetFromKV(
-            {
-              request: indexRequest,
-              waitUntil: ctx.waitUntil.bind(ctx),
-            }
-          );
+        if (e.message && (e.message.includes('Could not find') || e.message.includes('not found'))) {
+          try {
+            const indexRequest = new Request(`${url.origin}/index.html`, request);
+            return await getAssetFromKV(
+              {
+                request: indexRequest,
+                waitUntil: ctx.waitUntil.bind(ctx),
+              }
+            );
+          } catch (indexError: any) {
+            console.error('Index fetch error:', indexError);
+            throw new Error('Could not serve index.html');
+          }
         }
         throw e;
       }
     } catch (error) {
       console.error('Error handling request:', error);
-      return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+      return new Response(JSON.stringify({ error: 'Internal Server Error', message: error instanceof Error ? error.message : 'Unknown error' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
