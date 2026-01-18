@@ -11,7 +11,6 @@
 
   let editorContainer: HTMLDivElement;
   let view: EditorView;
-  let isInternalUpdate = false;
 
   onMount(() => {
     view = new EditorView({
@@ -38,8 +37,8 @@
           },
         }),
         EditorView.updateListener.of((update) => {
-          console.log('[MarkdownEditor] Update listener called, docChanged:', update.docChanged, 'isInternalUpdate:', isInternalUpdate);
-          if (update.docChanged && !isInternalUpdate) {
+          console.log('[MarkdownEditor] Update listener called, docChanged:', update.docChanged);
+          if (update.docChanged) {
             const newContent = view.state.doc.toString();
             console.log('[MarkdownEditor] Content changed, calling onChange');
             if (onChange) {
@@ -62,7 +61,6 @@
   // 外部内容更新时同步到编辑器
   $: if (view && content !== undefined && content !== view.state.doc.toString()) {
     console.log('[MarkdownEditor] External content update detected');
-    isInternalUpdate = true;
     const transaction = view.state.update({
       changes: {
         from: 0,
@@ -71,10 +69,6 @@
       },
     });
     view.dispatch(transaction);
-    // 使用 requestAnimationFrame 在下一个事件循环中重置标志
-    requestAnimationFrame(() => {
-      isInternalUpdate = false;
-    });
   }
 
   onDestroy(() => {
