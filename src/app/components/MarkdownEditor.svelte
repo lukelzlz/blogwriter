@@ -57,7 +57,7 @@
   });
 
   // 外部内容更新时同步到编辑器
-  $: if (view && content !== view.state.doc.toString()) {
+  $: if (view && content !== undefined && content !== view.state.doc.toString()) {
     const transaction = view.state.update({
       changes: {
         from: 0,
