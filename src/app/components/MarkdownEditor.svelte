@@ -11,6 +11,7 @@
 
   let editorContainer: HTMLDivElement;
   let view: EditorView;
+  let isInternalUpdate = false;
 
   onMount(() => {
     view = new EditorView({
@@ -37,10 +38,10 @@
           },
         }),
         EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            content = view.state.doc.toString();
+          if (update.docChanged && !isInternalUpdate) {
+            const newContent = view.state.doc.toString();
             if (onChange) {
-              onChange(content);
+              onChange(newContent);
             }
           }
         }),
@@ -58,6 +59,7 @@
 
   // 外部内容更新时同步到编辑器
   $: if (view && content !== undefined && content !== view.state.doc.toString()) {
+    isInternalUpdate = true;
     const transaction = view.state.update({
       changes: {
         from: 0,
@@ -66,6 +68,10 @@
       },
     });
     view.dispatch(transaction);
+    // 使用 requestAnimationFrame 在下一个事件循环中重置标志
+    requestAnimationFrame(() => {
+      isInternalUpdate = false;
+    });
   }
 
   onDestroy(() => {
