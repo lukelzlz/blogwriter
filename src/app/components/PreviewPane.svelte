@@ -12,7 +12,15 @@
     });
   });
 
-  $: htmlContent = marked.parse(content);
+  $: {
+    console.log('[PreviewPane] Content updated, length:', content?.length || 0);
+    try {
+      htmlContent = marked.parse(content);
+      console.log('[PreviewPane] marked.parse succeeded');
+    } catch (error) {
+      console.error('[PreviewPane] marked.parse error:', error);
+    }
+  }
 </script>
 
 <div bind:this={previewContainer} class="markdown-preview">
