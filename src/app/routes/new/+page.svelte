@@ -104,10 +104,7 @@
     <!-- 编辑器 -->
     <div class="editor-content full-width">
       <div class="editor-pane">
-        <MarkdownEditor
-          content={$editor.content}
-          onChange={(content) => editor.setContent(content)}
-        />
+        <MarkdownEditor bind:content={$editor.content} />
       </div>
     </div>
   </div>
