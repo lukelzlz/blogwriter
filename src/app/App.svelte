@@ -6,6 +6,7 @@
   import LoginPage from '$routes/login/+page.svelte';
   import NewPostPage from '$routes/new/+page.svelte';
   import SettingsPage from '$routes/settings/+page.svelte';
+  import EditPage from '$routes/edit/[slug]/+page.svelte';
 
   let currentPage: string = '';
 
@@ -86,7 +87,3 @@
     </div>
   </footer>
 </div>
-
-<script>
-  import EditPage from '$routes/edit/[slug]/+page.svelte';
-</script>
