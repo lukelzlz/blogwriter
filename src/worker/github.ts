@@ -14,6 +14,8 @@ export async function getRepoInfo(
       // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
       'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
+      // 🔧 修复：GitHub API 要求必须包含 User-Agent header
+      'User-Agent': 'BlogWriter/1.0',
     },
   });
 
@@ -35,6 +37,8 @@ export async function getRepoBranches(
       // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
       'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
+      // 🔧 修复：GitHub API 要求必须包含 User-Agent header
+      'User-Agent': 'BlogWriter/1.0',
     },
   });
 
@@ -63,6 +67,8 @@ export async function getDirectoryContents(
       // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
       'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
+      // 🔧 修复：GitHub API 要求必须包含 User-Agent header
+      'User-Agent': 'BlogWriter/1.0',
     },
   });
 
@@ -91,6 +97,8 @@ export async function getFileContent(
       // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
       'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
+      // 🔧 修复：GitHub API 要求必须包含 User-Agent header
+      'User-Agent': 'BlogWriter/1.0',
     },
   });
 
@@ -140,6 +148,8 @@ export async function createOrUpdateFile(
       'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      // 🔧 修复：GitHub API 要求必须包含 User-Agent header
+      'User-Agent': 'BlogWriter/1.0',
     },
     body: JSON.stringify(body),
   });
@@ -178,6 +188,8 @@ export async function deleteFile(
       'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      // 🔧 修复：GitHub API 要求必须包含 User-Agent header
+      'User-Agent': 'BlogWriter/1.0',
     },
     body: JSON.stringify(body),
   });
