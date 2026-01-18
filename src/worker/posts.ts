@@ -16,13 +16,21 @@ export async function getPosts(
   path: string = '_posts',
   branch?: string
 ): Promise<Post[]> {
+  console.log('[DEBUG] getPosts called with:', { owner, repo, path, branch });
+
   const files = await getDirectoryContents(owner, repo, path, accessToken, branch);
-  
+
+  console.log('[DEBUG] Files from GitHub API:', files);
+  console.log('[DEBUG] Total files count:', files.length);
+
   // 过滤出 Markdown 文件
-  const markdownFiles = files.filter((file) => 
+  const markdownFiles = files.filter((file) =>
     file.type === 'file' && file.name.endsWith('.md')
   );
-  
+
+  console.log('[DEBUG] Markdown files count:', markdownFiles.length);
+  console.log('[DEBUG] Markdown files:', markdownFiles.map(f => ({ name: f.name, path: f.path })));
+
   return markdownFiles.map((file) => ({
     path: file.path,
     name: file.name,

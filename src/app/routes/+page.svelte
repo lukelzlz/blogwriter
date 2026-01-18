@@ -21,20 +21,32 @@
     loading = true;
     posts.setLoading(true);
 
+    const postsPath = $auth.postsPath || 'source/_posts';
+    const branch = 'main';
+    console.log('[DEBUG] Loading posts with params:', {
+      repo: $auth.repo,
+      path: postsPath,
+      branch: branch
+    });
+
     try {
       const response = await postsApi.getList({
-        path: '_posts',
-        branch: 'main',
+        path: postsPath,
+        branch: branch,
       });
 
+      console.log('[DEBUG] API response:', response);
+
       if (response.success && response.data) {
+        console.log('[DEBUG] Posts loaded successfully:', response.data);
         posts.setPosts(response.data);
       } else {
+        console.error('[DEBUG] API returned error:', response.error);
         posts.setError(response.error || '加载文章失败');
       }
     } catch (error) {
+      console.error('[DEBUG] Exception loading posts:', error);
       posts.setError('加载文章失败');
-      console.error('Error loading posts:', error);
     } finally {
       loading = false;
       posts.setLoading(false);

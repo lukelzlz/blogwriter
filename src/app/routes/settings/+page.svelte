@@ -5,6 +5,7 @@
   export let navigate: (path: string) => void = () => {};
   let owner = '';
   let repo = '';
+  let postsPath = '';
   let loading = false;
   let error = '';
   let success = '';
@@ -12,6 +13,10 @@
   $: if ($auth.repo) {
     owner = $auth.repo.owner;
     repo = $auth.repo.name;
+  }
+
+  $: if ($auth.postsPath) {
+    postsPath = $auth.postsPath;
   }
 
   async function handleSave() {
@@ -29,6 +34,9 @@
 
       if (response.success && response.data) {
         auth.setRepo(owner, repo);
+        if (postsPath) {
+          auth.setPostsPath(postsPath);
+        }
         success = '仓库配置已保存';
         setTimeout(() => (success = ''), 3000);
       } else {
@@ -97,6 +105,22 @@
         </p>
       </div>
 
+      <div>
+        <label for="postsPath" class="block text-sm font-medium text-gray-700 mb-2">
+          文章路径
+        </label>
+        <input
+          id="postsPath"
+          type="text"
+          bind:value={postsPath}
+          placeholder="例如: source/_posts"
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <p class="text-sm text-gray-500 mt-1">
+          Hexo 博客文章所在的目录路径（默认: source/_posts）
+        </p>
+      </div>
+
       <div class="pt-4">
         <button
           on:click={handleSave}
@@ -131,6 +155,10 @@
           <p class="text-sm mt-2">
             <span class="font-medium">用户:</span>
             <span class="ml-1">{$auth.user?.login}</span>
+          </p>
+          <p class="text-sm mt-2">
+            <span class="font-medium">文章路径:</span>
+            <span class="ml-1">{$auth.postsPath}</span>
           </p>
         </div>
       {:else}

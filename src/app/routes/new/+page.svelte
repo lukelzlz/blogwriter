@@ -40,6 +40,7 @@
         {
           title: $editor.title,
           content: $editor.content,
+          path: $auth.postsPath || 'source/_posts',
         },
         'main'
       );

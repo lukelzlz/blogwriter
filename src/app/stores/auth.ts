@@ -9,6 +9,7 @@ interface AuthState {
     owner: string;
     name: string;
   } | null;
+  postsPath: string;
 }
 
 function createAuthStore() {
@@ -17,6 +18,7 @@ function createAuthStore() {
     user: null,
     sessionId: null,
     repo: null,
+    postsPath: 'source/_posts',
   });
 
   // 从 localStorage 恢复会话
@@ -25,10 +27,12 @@ function createAuthStore() {
     const sessionId = localStorage.getItem('sessionId');
     const userJson = localStorage.getItem('user');
     const repoJson = localStorage.getItem('repo');
+    const postsPath = localStorage.getItem('postsPath') || 'source/_posts';
 
     console.log('  - sessionId:', sessionId);
     console.log('  - userJson:', userJson);
     console.log('  - repoJson:', repoJson);
+    console.log('  - postsPath:', postsPath);
 
     if (sessionId && userJson) {
       console.log('✅ [Auth Store Debug] sessionId 和 user 都存在，恢复会话');
@@ -38,6 +42,7 @@ function createAuthStore() {
         sessionId,
         user: JSON.parse(userJson),
         repo: repoJson ? JSON.parse(repoJson) : null,
+        postsPath,
       }));
     } else {
       console.log('❌ [Auth Store Debug] 无法恢复会话:');
@@ -68,6 +73,7 @@ function createAuthStore() {
     localStorage.removeItem('sessionId');
     localStorage.removeItem('user');
     localStorage.removeItem('repo');
+    localStorage.removeItem('postsPath');
 
     update((state) => ({
       ...state,
@@ -75,6 +81,7 @@ function createAuthStore() {
       user: null,
       sessionId: null,
       repo: null,
+      postsPath: 'source/_posts',
     }));
   }
 
@@ -88,12 +95,22 @@ function createAuthStore() {
     }));
   }
 
+  // 设置文章路径
+  function setPostsPath(postsPath: string) {
+    localStorage.setItem('postsPath', postsPath);
+    update((state) => ({
+      ...state,
+      postsPath,
+    }));
+  }
+
   return {
     subscribe,
     restoreSession,
     setSession,
     clearSession,
     setRepo,
+    setPostsPath,
   };
 }
 
