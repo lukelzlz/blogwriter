@@ -14,13 +14,34 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // CORS headers
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
+    // 获取请求的来源
+    const origin = request.headers.get('Origin');
+    
+    // 允许的来源列表
+    const allowedOrigins = [
+      'https://writer.qwqc.cc',
+      // 可以添加其他允许的来源，例如本地开发环境
+      // 'http://localhost:5173',
+      // 'http://localhost:3000',
+    ];
+    
+    // 验证来源是否在允许列表中
+    const isAllowedOrigin = origin && allowedOrigins.includes(origin);
+    
+    // CORS headers - 使用动态的 Origin
+    const corsHeaders: Record<string, string> = {
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Max-Age': '86400',
     };
+    
+    // 只有当来源在允许列表中时才设置 Access-Control-Allow-Origin
+    if (isAllowedOrigin) {
+      corsHeaders['Access-Control-Allow-Origin'] = origin;
+    }
+    
+    // 如果需要支持凭证（cookies），添加以下头
+    // corsHeaders['Access-Control-Allow-Credentials'] = 'true';
 
     // Handle CORS preflight requests
     if (request.method === 'OPTIONS') {

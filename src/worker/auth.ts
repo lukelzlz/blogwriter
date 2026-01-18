@@ -215,7 +215,8 @@ export async function handleAuth(
       const sessionId = await createSession(env, user, accessToken);
 
       // 重定向到前端，带上 session ID
-      const frontendUrl = url.origin;
+      // 使用硬编码的前端 URL，而不是请求的 origin
+      const frontendUrl = 'https://writer.qwqc.cc';
       return Response.redirect(`${frontendUrl}/?session=${sessionId}`, 302);
     } catch (error) {
       console.error('OAuth callback error:', error);
