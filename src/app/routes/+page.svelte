@@ -16,7 +16,10 @@
   });
 
   async function loadPosts() {
-    if (!$auth.repo) return;
+    if (!$auth.repo) {
+      console.error('[DEBUG] No repo configured');
+      return;
+    }
 
     loading = true;
     posts.setLoading(true);
@@ -26,7 +29,8 @@
     console.log('[DEBUG] Loading posts with params:', {
       repo: $auth.repo,
       path: postsPath,
-      branch: branch
+      branch: branch,
+      isAuthenticated: $auth.isAuthenticated
     });
 
     try {
@@ -36,9 +40,13 @@
       });
 
       console.log('[DEBUG] API response:', response);
+      console.log('[DEBUG] Response success:', response.success);
+      console.log('[DEBUG] Response data:', response.data);
+      console.log('[DEBUG] Response error:', response.error);
 
       if (response.success && response.data) {
-        console.log('[DEBUG] Posts loaded successfully:', response.data);
+        console.log('[DEBUG] Posts loaded successfully, count:', response.data.length);
+        console.log('[DEBUG] Posts details:', response.data);
         posts.setPosts(response.data);
       } else {
         console.error('[DEBUG] API returned error:', response.error);
