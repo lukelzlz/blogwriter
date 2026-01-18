@@ -61,12 +61,12 @@
     error = '';
 
     try {
-      const response = await postsApi.get(slug, 'main');
+      const response = await postsApi.get(slug, 'main', $auth.repo?.owner, $auth.repo?.name);
 
       if (response.success && response.data) {
         const post = response.data;
         const { title, body } = parseFrontMatter(post.content || '');
-        
+
         editor.setCurrentPost(post);
         editor.setTitle(title || '');
         editor.setContent(body);

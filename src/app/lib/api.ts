@@ -83,9 +83,13 @@ export const postsApi = {
   },
 
   // 获取单个文章
-  async get(path: string, branch?: string) {
-    const queryParams = branch ? `?branch=${branch}` : '';
-    return request<Post>(`/api/posts/${encodeURIComponent(path)}${queryParams}`);
+  async get(path: string, branch?: string, owner?: string, repo?: string) {
+    const queryParams = new URLSearchParams();
+    if (branch) queryParams.set('branch', branch);
+    if (owner) queryParams.set('owner', owner);
+    if (repo) queryParams.set('repo', repo);
+
+    return request<Post>(`/api/posts/${encodeURIComponent(path)}?${queryParams.toString()}`);
   },
 
   // 创建文章
