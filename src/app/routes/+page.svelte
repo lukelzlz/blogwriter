@@ -10,8 +10,15 @@
   let loading = false;
 
   onMount(async () => {
+    console.log('[DEBUG] onMount called');
+    console.log('[DEBUG] isAuthenticated:', $auth.isAuthenticated);
+    console.log('[DEBUG] repo:', $auth.repo);
+    console.log('[DEBUG] postsPath:', $auth.postsPath);
+
     if ($auth.isAuthenticated) {
       await loadPosts();
+    } else {
+      console.log('[DEBUG] Not authenticated, skipping loadPosts');
     }
   });
 
