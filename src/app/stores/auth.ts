@@ -21,11 +21,17 @@ function createAuthStore() {
 
   // 从 localStorage 恢复会话
   function restoreSession() {
+    console.log('🔍 [Auth Store Debug] restoreSession() 被调用');
     const sessionId = localStorage.getItem('sessionId');
     const userJson = localStorage.getItem('user');
     const repoJson = localStorage.getItem('repo');
 
+    console.log('  - sessionId:', sessionId);
+    console.log('  - userJson:', userJson);
+    console.log('  - repoJson:', repoJson);
+
     if (sessionId && userJson) {
+      console.log('✅ [Auth Store Debug] sessionId 和 user 都存在，恢复会话');
       update((state) => ({
         ...state,
         isAuthenticated: true,
@@ -33,6 +39,10 @@ function createAuthStore() {
         user: JSON.parse(userJson),
         repo: repoJson ? JSON.parse(repoJson) : null,
       }));
+    } else {
+      console.log('❌ [Auth Store Debug] 无法恢复会话:');
+      if (!sessionId) console.log('  - 缺少 sessionId');
+      if (!userJson) console.log('  - 缺少 userJson');
     }
   }
 
