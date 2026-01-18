@@ -1,12 +1,9 @@
 import { handleAuth } from './auth';
 import { handlePosts } from './posts';
 import { handleRepo } from './github';
-import { getAssetFromKV } from '@cloudflare/kv-asset-handler';
 
 export interface Env {
   SESSIONS: KVNamespace;
-  __STATIC_CONTENT?: KVNamespace;
-  ASSETS?: KVNamespace;
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;
   GITHUB_REDIRECT_URI: string;
@@ -44,48 +41,70 @@ export default {
         return handleRepo(request, env, ctx, corsHeaders);
       }
 
-      // Serve static files using Workers Sites
-      try {
-        const asset = await getAssetFromKV(
+      // For static files, redirect to Cloudflare Pages
+      // This assumes you have deployed the frontend to Cloudflare Pages
+      const pagesUrl = 'https://writer.qwqc.cc';
+      if (path.startsWith('/assets')) {
+        // Redirect to Pages for static assets
+        return Response.redirect(`${pagesUrl}${path}`, 302);
+      }
+
+      // For root path, return a simple message with instructions
+      if (path === '/' || path === '') {
+        return new Response(
+          `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hexo Blog Manager</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 { color: #333; }
+    p { color: #666; }
+    a { color: #0066cc; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .info {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Hexo Blog Manager API</h1>
+  <p>欢迎使用 Hexo Blog Manager API 服务。</p>
+  <div class="info">
+    <p><strong>前端应用：</strong> <a href="https://writer.qwqc.cc">https://writer.qwqc.cc</a></p>
+    <p><strong>API 端点：</strong></p>
+    <ul>
+      <li><code>POST /auth/github</code> - GitHub OAuth 登录</li>
+      <li><code>GET /auth/callback</code> - GitHub OAuth 回调</li>
+      <li><code>GET /api/posts</code> - 获取文章列表</li>
+      <li><code>POST /api/posts</code> - 创建新文章</li>
+      <li><code>PUT /api/posts/:slug</code> - 更新文章</li>
+      <li><code>DELETE /api/posts/:slug</code> - 删除文章</li>
+      <li><code>GET /api/repo</code> - 获取仓库信息</li>
+    </ul>
+  </div>
+  <p>请访问前端应用以开始使用 Hexo Blog Manager。</p>
+</body>
+</html>`,
           {
-            request,
-            waitUntil: ctx.waitUntil.bind(ctx),
-          },
-          {
-            cacheControl: {
-              browserTTL: 60 * 60 * 24 * 365, // 1 year
-              edgeTTL: 60 * 60 * 24 * 365, // 1 year
-              bypassCache: false,
-            },
+            headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders },
           }
         );
-        return asset;
-      } catch (e: any) {
-        console.error('Asset fetch error:', e);
-        // If asset not found, serve index.html for SPA routing
-        if (e.message && (e.message.includes('Could not find') || e.message.includes('not found'))) {
-          try {
-            const indexRequest = new Request(`${url.origin}/index.html`, request);
-            return await getAssetFromKV(
-              {
-                request: indexRequest,
-                waitUntil: ctx.waitUntil.bind(ctx),
-              }
-            );
-          } catch (indexError: any) {
-            console.error('Index fetch error:', indexError);
-            return new Response('Not Found', { status: 404, headers: corsHeaders });
-          }
-        }
-        // If no ASSETS binding is available, return error
-        if (e.message && e.message.includes('no KV namespace bound')) {
-          return new Response('Static assets not available. Please ensure Workers Sites is properly configured.', {
-            status: 500,
-            headers: { 'Content-Type': 'text/plain', ...corsHeaders },
-          });
-        }
-        throw e;
       }
+
+      // 404
+      return new Response('Not Found', { status: 404, headers: corsHeaders });
     } catch (error) {
       console.error('Error handling request:', error);
       return new Response(JSON.stringify({ error: 'Internal Server Error', message: error instanceof Error ? error.message : 'Unknown error' }), {
