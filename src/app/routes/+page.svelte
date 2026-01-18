@@ -1,0 +1,129 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { auth } from '$stores/auth';
+  import { posts } from '$stores/posts';
+  import { postsApi } from '$lib/api';
+  import PostList from '$components/PostList.svelte';
+  import LoginButton from '$components/LoginButton.svelte';
+
+  export let navigate: (path: string) => void = () => {};
+  let loading = false;
+
+  onMount(async () => {
+    if ($auth.isAuthenticated) {
+      await loadPosts();
+    }
+  });
+
+  async function loadPosts() {
+    if (!$auth.repo) return;
+
+    loading = true;
+    posts.setLoading(true);
+
+    try {
+      const response = await postsApi.getList({
+        path: '_posts',
+        branch: 'main',
+      });
+
+      if (response.success && response.data) {
+        posts.setPosts(response.data);
+      } else {
+        posts.setError(response.error || '加载文章失败');
+      }
+    } catch (error) {
+      posts.setError('加载文章失败');
+      console.error('Error loading posts:', error);
+    } finally {
+      loading = false;
+      posts.setLoading(false);
+    }
+  }
+
+  function handleEdit(post: any) {
+    // 导航到编辑页面
+    navigate(`/edit/${encodeURIComponent(post.path)}`);
+  }
+
+  async function handleDelete(post: any) {
+    if (!$auth.repo) return;
+
+    try {
+      const response = await postsApi.delete(
+        post.path,
+        post.sha,
+        'main'
+      );
+
+      if (response.success) {
+        posts.removePost(post.path);
+      } else {
+        alert('删除失败: ' + (response.error || '未知错误'));
+      }
+    } catch (error) {
+      alert('删除失败');
+      console.error('Error deleting post:', error);
+    }
+  }
+</script>
+
+<div class="max-w-4xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-3xl font-bold text-gray-900">文章列表</h1>
+    {#if $auth.isAuthenticated}
+      <a
+        href="/new"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition flex items-center"
+      >
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
+        新建文章
+      </a>
+    {/if}
+  </div>
+
+  {#if !$auth.isAuthenticated}
+    <div class="bg-white rounded-lg shadow-sm p-8 text-center">
+      <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+        />
+      </svg>
+      <h2 class="text-xl font-semibold mb-4">请先登录</h2>
+      <p class="text-gray-600 mb-6">登录后即可管理您的 Hexo 博客文章</p>
+      <LoginButton />
+    </div>
+  {:else if !$auth.repo}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+      <p class="text-yellow-800">
+        请先在设置中配置您的 GitHub 仓库信息
+      </p>
+      <a href="/settings" class="text-yellow-800 underline mt-2 inline-block">
+        前往设置
+      </a>
+    </div>
+  {:else}
+    <PostList
+      posts={$posts.posts}
+      loading={$posts.loading}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
+    />
+
+    {#if $posts.error}
+      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mt-4">
+        {$posts.error}
+      </div>
+    {/if}
+  {/if}
+</div>
