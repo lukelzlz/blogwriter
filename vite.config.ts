@@ -1,9 +1,16 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { resolve } from 'path';
+import sveltePreprocess from 'svelte-preprocess';
 
 export default defineConfig({
-  plugins: [svelte()],
+  plugins: [
+    svelte({
+      preprocess: sveltePreprocess({
+        typescript: true,
+      }),
+    }),
+  ],
   resolve: {
     alias: {
       $app: resolve(__dirname, './src/app'),
@@ -12,6 +19,7 @@ export default defineConfig({
       $lib: resolve(__dirname, './src/app/lib'),
       $components: resolve(__dirname, './src/app/components'),
       $stores: resolve(__dirname, './src/app/stores'),
+      $routes: resolve(__dirname, './src/app/routes'),
     },
   },
   server: {
