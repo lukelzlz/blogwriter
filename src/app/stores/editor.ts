@@ -7,7 +7,6 @@ interface EditorState {
   content: string;
   isDirty: boolean;
   isSaving: boolean;
-  showPreview: boolean;
   lastSavedAt: Date | null;
 }
 
@@ -18,9 +17,11 @@ function createEditorStore() {
     content: '',
     isDirty: false,
     isSaving: false,
-    showPreview: true,
     lastSavedAt: null,
   });
+
+  // 创建一个可读的 store 用于 derived
+  const editorStore = { subscribe };
 
   // 设置当前编辑的文章
   function setCurrentPost(post: Post | null) {
@@ -45,7 +46,6 @@ function createEditorStore() {
 
   // 更新内容
   function setContent(content: string) {
-    console.log('[Editor Store] setContent called, length:', content?.length || 0);
     update((state) => ({
       ...state,
       content,
@@ -71,14 +71,6 @@ function createEditorStore() {
     }));
   }
 
-  // 切换预览
-  function togglePreview() {
-    update((state) => ({
-      ...state,
-      showPreview: !state.showPreview,
-    }));
-  }
-
   // 重置编辑器
   function reset() {
     set({
@@ -87,7 +79,6 @@ function createEditorStore() {
       content: '',
       isDirty: false,
       isSaving: false,
-      showPreview: true,
       lastSavedAt: null,
     });
   }
@@ -135,14 +126,14 @@ function createEditorStore() {
 
   // 派生属性：完整内容（包含 front-matter）
   const fullContent = derived(
-    { title: { subscribe }, content: { subscribe } },
-    ($values) => {
-      const { title, content } = $values;
+    editorStore,
+    ($state) => {
+      const { title, content } = $state;
       if (!title) return content;
-      
+
       const now = new Date();
       const dateStr = now.toISOString().replace('T', ' ').substring(0, 19);
-      
+
       return `---
 title: ${title}
 date: ${dateStr}
@@ -159,7 +150,6 @@ ${content}`;
     setContent,
     markAsSaved,
     setSaving,
-    togglePreview,
     reset,
     saveToLocal,
     loadFromLocal,

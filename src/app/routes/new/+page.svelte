@@ -4,7 +4,6 @@
   import { editor } from '$stores/editor';
   import { postsApi } from '$lib/api';
   import MarkdownEditor from '$components/MarkdownEditor.svelte';
-  import PreviewPane from '$components/PreviewPane.svelte';
 
   export let navigate: (path: string) => void = () => {};
 
@@ -84,12 +83,6 @@
           placeholder="文章标题"
           class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <button
-          on:click={() => editor.togglePreview()}
-          class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition"
-        >
-          {$editor.showPreview ? '隐藏预览' : '显示预览'}
-        </button>
       </div>
       <div class="flex items-center space-x-2">
         {#if $editor.isDirty}
@@ -108,16 +101,11 @@
       </div>
     </div>
 
-    <!-- 编辑器和预览 -->
-    <div class="editor-content {!$editor.showPreview ? 'full-width' : 'split-view'}">
+    <!-- 编辑器 -->
+    <div class="editor-content full-width">
       <div class="editor-pane">
         <MarkdownEditor bind:content={$editor.content} />
       </div>
-      {#if $editor.showPreview}
-        <div class="preview-pane">
-          <PreviewPane content={$editor.fullContent} />
-        </div>
-      {/if}
     </div>
   </div>
 </div>
@@ -138,39 +126,11 @@
   }
 
   .editor-content {
-    display: flex;
+    display: block;
     height: calc(100vh - 250px);
   }
 
-  .editor-content.full-width {
-    display: block;
-  }
-
   .editor-pane {
-    flex: 1;
     overflow: hidden;
-  }
-
-  .preview-pane {
-    flex: 1;
-    overflow: hidden;
-    border-left: 1px solid #e5e7eb;
-  }
-
-  @media (max-width: 768px) {
-    .editor-content.split-view {
-      flex-direction: column;
-    }
-
-    .preview-pane {
-      border-left: none;
-      border-top: 1px solid #e5e7eb;
-    }
-
-    .toolbar {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 1rem;
-    }
   }
 </style>

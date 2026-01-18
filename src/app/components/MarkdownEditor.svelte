@@ -37,13 +37,9 @@
           },
         }),
         EditorView.updateListener.of((update) => {
-          console.log('[MarkdownEditor] Update listener called, docChanged:', update.docChanged);
           if (update.docChanged) {
-            const newContent = view.state.doc.toString();
-            console.log('[MarkdownEditor] Content changed, length:', newContent?.length || 0);
-            content = newContent;
+            content = view.state.doc.toString();
             if (onChange) {
-              console.log('[MarkdownEditor] Calling onChange callback');
               onChange(content);
             }
           }
@@ -62,7 +58,6 @@
 
   // 外部内容更新时同步到编辑器
   $: if (view && content !== view.state.doc.toString()) {
-    console.log('[MarkdownEditor] External content update detected, dispatching to editor');
     const transaction = view.state.update({
       changes: {
         from: 0,
