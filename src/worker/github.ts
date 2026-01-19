@@ -178,9 +178,18 @@ export async function createOrUpdateFile(
   console.log('[DEBUG] createOrUpdateFile response status:', response.status);
 
   if (!response.ok) {
-    const error = await response.json();
-    console.error('[DEBUG] createOrUpdateFile error:', error);
-    throw new Error(`Failed to create/update file: ${error.message}`);
+    const errorText = await response.text();
+    console.error('[DEBUG] createOrUpdateFile error response:', errorText);
+    console.error('[DEBUG] createOrUpdateFile error status:', response.status);
+
+    let error;
+    try {
+      error = JSON.parse(errorText);
+    } catch (e) {
+      error = { message: errorText };
+    }
+
+    throw new Error(`Failed to create/update file: ${error.message || errorText}`);
   }
 
   const result = await response.json();
