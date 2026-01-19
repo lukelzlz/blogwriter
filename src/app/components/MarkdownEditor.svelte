@@ -6,6 +6,7 @@
 
   let textarea: HTMLTextAreaElement;
   let lineNumbers: HTMLDivElement;
+  let isInternalUpdate = false;
 
   function updateLineNumbers() {
     if (!textarea || !lineNumbers) return;
@@ -15,7 +16,7 @@
   }
 
   function handleInput() {
-    if (onChange) {
+    if (onChange && !isInternalUpdate) {
       onChange(textarea.value);
     }
     updateLineNumbers();
@@ -45,9 +46,13 @@
   }
 
   // 外部内容更新时同步到 textarea
-  $: if (textarea && content !== textarea.value) {
+  $: if (textarea && content !== undefined && content !== textarea.value && !isInternalUpdate) {
+    isInternalUpdate = true;
     textarea.value = content;
     updateLineNumbers();
+    setTimeout(() => {
+      isInternalUpdate = false;
+    }, 0);
   }
 </script>
 
