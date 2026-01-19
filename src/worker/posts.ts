@@ -31,13 +31,61 @@ export async function getPosts(
   console.log('[DEBUG] Markdown files count:', markdownFiles.length);
   console.log('[DEBUG] Markdown files:', markdownFiles.map(f => ({ name: f.name, path: f.path })));
 
-  return markdownFiles.map((file) => ({
-    path: file.path,
-    name: file.name,
-    sha: file.sha,
-    size: file.size,
-    url: file.html_url,
-  }));
+  // 获取每个文件的内容并解析 front-matter
+  const postsWithFrontMatter = await Promise.all(
+    markdownFiles.map(async (file) => {
+      try {
+        const { content } = await getFileContent(owner, repo, file.path, accessToken, branch);
+        
+        // 解析 front-matter
+        const frontMatterRegex = /^---\n([\s\S]*?)\n---/;
+        const match = content.match(frontMatterRegex);
+        
+        let frontMatter = undefined;
+        if (match) {
+          const frontMatterText = match[1];
+          const titleMatch = frontMatterText.match(/^title:\s*(.+)$/m);
+          const dateMatch = frontMatterText.match(/^date:\s*(.+)$/m);
+          
+          // 只有当 title 和 date 都存在时才设置 frontMatter
+          if (titleMatch && dateMatch) {
+            frontMatter = {
+              title: titleMatch[1].trim(),
+              date: dateMatch[1].trim(),
+            };
+          }
+        }
+        
+        return {
+          path: file.path,
+          name: file.name,
+          sha: file.sha,
+          size: file.size,
+          url: file.html_url,
+          frontMatter,
+        };
+      } catch (error) {
+        console.error(`Error fetching content for ${file.path}:`, error);
+        // 如果获取内容失败，返回不带 front-matter 的文章
+        return {
+          path: file.path,
+          name: file.name,
+          sha: file.sha,
+          size: file.size,
+          url: file.html_url,
+        };
+      }
+    })
+  );
+
+  // 按日期降序排序（最新的在前）
+  postsWithFrontMatter.sort((a, b) => {
+    const dateA = a.frontMatter?.date ? new Date(a.frontMatter.date).getTime() : 0;
+    const dateB = b.frontMatter?.date ? new Date(b.frontMatter.date).getTime() : 0;
+    return dateB - dateA;
+  });
+
+  return postsWithFrontMatter;
 }
 
 // 获取单个文章
