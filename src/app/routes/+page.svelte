@@ -97,7 +97,9 @@
       const response = await postsApi.delete(
         post.path,
         post.sha,
-        'main'
+        'main',
+        $auth.repo.owner,
+        $auth.repo.name
       );
 
       if (response.success) {

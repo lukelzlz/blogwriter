@@ -41,7 +41,9 @@
           content: $editor.content,
           path: $auth.postsPath || 'source/_posts',
         },
-        'main'
+        'main',
+        $auth.repo?.owner,
+        $auth.repo?.name
       );
 
       if (response.success && response.data) {

@@ -93,28 +93,38 @@ export const postsApi = {
   },
 
   // 创建文章
-  async create(params: CreatePostParams, branch?: string) {
-    const queryParams = branch ? `?branch=${branch}` : '';
-    return request<Post>(`/api/posts${queryParams}`, {
+  async create(params: CreatePostParams, branch?: string, owner?: string, repo?: string) {
+    const queryParams = new URLSearchParams();
+    if (branch) queryParams.set('branch', branch);
+    if (owner) queryParams.set('owner', owner);
+    if (repo) queryParams.set('repo', repo);
+
+    return request<Post>(`/api/posts?${queryParams.toString()}`, {
       method: 'POST',
       body: JSON.stringify(params),
     });
   },
 
   // 更新文章
-  async update(path: string, params: UpdatePostParams, branch?: string) {
-    const queryParams = branch ? `?branch=${branch}` : '';
-    return request<Post>(`/api/posts/${encodeURIComponent(path)}${queryParams}`, {
+  async update(path: string, params: UpdatePostParams, branch?: string, owner?: string, repo?: string) {
+    const queryParams = new URLSearchParams();
+    if (branch) queryParams.set('branch', branch);
+    if (owner) queryParams.set('owner', owner);
+    if (repo) queryParams.set('repo', repo);
+
+    return request<Post>(`/api/posts/${encodeURIComponent(path)}?${queryParams.toString()}`, {
       method: 'PUT',
       body: JSON.stringify(params),
     });
   },
 
   // 删除文章
-  async delete(path: string, sha: string, branch?: string) {
+  async delete(path: string, sha: string, branch?: string, owner?: string, repo?: string) {
     const queryParams = new URLSearchParams({ sha });
     if (branch) queryParams.set('branch', branch);
-    
+    if (owner) queryParams.set('owner', owner);
+    if (repo) queryParams.set('repo', repo);
+
     return request<{ success: boolean }>(`/api/posts/${encodeURIComponent(path)}?${queryParams.toString()}`, {
       method: 'DELETE',
     });

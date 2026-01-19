@@ -161,7 +161,9 @@
           content: $editor.fullContent,
           sha: $editor.currentPost.sha,
         },
-        'main'
+        'main',
+        $auth.repo?.owner,
+        $auth.repo?.name
       );
 
       if (response.success && response.data) {
