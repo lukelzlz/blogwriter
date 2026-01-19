@@ -171,10 +171,22 @@
         content: $editor.content,
       });
 
+      // 手动构建完整内容（包含 front-matter）
+      const now = new Date();
+      const dateStr = now.toISOString().replace('T', ' ').substring(0, 19);
+      const contentToSend = `---
+title: ${$editor.title}
+date: ${dateStr}
+---
+
+${$editor.content}`;
+
+      console.log('[DEBUG] 手动构建的 contentToSend:', contentToSend);
+
       // 检查必要的参数
-      if (!$editor.fullContent || !$editor.currentPost.sha) {
+      if (!contentToSend || !$editor.currentPost.sha) {
         console.error('[DEBUG] Missing required parameters:', {
-          fullContent: $editor.fullContent,
+          contentToSend,
           sha: $editor.currentPost.sha,
         });
         alert('保存失败: 缺少必要参数');
@@ -184,7 +196,7 @@
       const response = await postsApi.update(
         slug,
         {
-          content: $editor.fullContent,
+          content: contentToSend,
           sha: $editor.currentPost.sha,
         },
         'main',
