@@ -109,7 +109,9 @@ export async function updatePost(
   branch?: string
 ): Promise<Post> {
   const { path, content, sha } = params;
-  
+
+  console.log('[DEBUG] updatePost called with:', { owner, repo, path, contentLength: content?.length, sha, branch });
+
   // 提交到 GitHub
   const result = await createOrUpdateFile(
     owner,
@@ -121,7 +123,9 @@ export async function updatePost(
     sha,
     branch
   );
-  
+
+  console.log('[DEBUG] updatePost result:', result);
+
   return {
     path,
     name: path.split('/').pop() || '',

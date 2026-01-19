@@ -128,6 +128,17 @@ export async function createOrUpdateFile(
   sha?: string,
   branch?: string
 ): Promise<{ content: GitHubFile; commit: { sha: string } }> {
+  console.log('[DEBUG] createOrUpdateFile called with:', {
+    owner,
+    repo,
+    path,
+    contentLength: content?.length,
+    message,
+    hasSha: !!sha,
+    sha: sha?.substring(0, 10) + '...',
+    branch,
+  });
+
   const body: any = {
     message,
     content: btoa(content),
@@ -141,7 +152,16 @@ export async function createOrUpdateFile(
     body.branch = branch;
   }
 
-  const response = await fetch(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${path}`, {
+  const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${path}`;
+  console.log('[DEBUG] createOrUpdateFile URL:', url);
+  console.log('[DEBUG] createOrUpdateFile body (partial):', {
+    message: body.message,
+    contentLength: body.content.length,
+    hasSha: !!body.sha,
+    branch: body.branch,
+  });
+
+  const response = await fetch(url, {
     method: 'PUT',
     headers: {
       // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
@@ -154,12 +174,17 @@ export async function createOrUpdateFile(
     body: JSON.stringify(body),
   });
 
+  console.log('[DEBUG] createOrUpdateFile response status:', response.status);
+
   if (!response.ok) {
     const error = await response.json();
+    console.error('[DEBUG] createOrUpdateFile error:', error);
     throw new Error(`Failed to create/update file: ${error.message}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  console.log('[DEBUG] createOrUpdateFile result:', result);
+  return result;
 }
 
 // 删除文件
