@@ -89,7 +89,7 @@ export const postsApi = {
     if (owner) queryParams.set('owner', owner);
     if (repo) queryParams.set('repo', repo);
 
-    return request<Post>(`/api/posts/${encodeURIComponent(path)}?${queryParams.toString()}`);
+    return request<Post>(`/api/posts/${path}?${queryParams.toString()}`);
   },
 
   // 创建文章
@@ -114,7 +114,7 @@ export const postsApi = {
     if (owner) queryParams.set('owner', owner);
     if (repo) queryParams.set('repo', repo);
 
-    const url = `/api/posts/${encodeURIComponent(path)}?${queryParams.toString()}`;
+    const url = `/api/posts/${path}?${queryParams.toString()}`;
     console.log('[DEBUG] Request URL:', url);
     console.log('[DEBUG] Request body:', JSON.stringify(params));
 
@@ -131,7 +131,7 @@ export const postsApi = {
     if (owner) queryParams.set('owner', owner);
     if (repo) queryParams.set('repo', repo);
 
-    return request<{ success: boolean }>(`/api/posts/${encodeURIComponent(path)}?${queryParams.toString()}`, {
+    return request<{ success: boolean }>(`/api/posts/${path}?${queryParams.toString()}`, {
       method: 'DELETE',
     });
   },
