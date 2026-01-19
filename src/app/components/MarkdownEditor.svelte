@@ -56,6 +56,8 @@
       if (!isInternalUpdate && onChange) {
         const newContent = editor.getValue();
         console.log('[MarkdownEditor] Calling onChange with:', newContent);
+        // 立即更新 lastExternalContent，避免外部更新触发重新设置
+        lastExternalContent = newContent;
         onChange(newContent);
       }
     });
