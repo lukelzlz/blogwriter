@@ -1,4 +1,4 @@
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import type { Post } from '$shared/types';
 
 interface EditorState {
@@ -8,6 +8,7 @@ interface EditorState {
   isDirty: boolean;
   isSaving: boolean;
   lastSavedAt: Date | null;
+  originalDate: string | null; // 保存原始日期，编辑时保留
 }
 
 function createEditorStore() {
@@ -18,6 +19,7 @@ function createEditorStore() {
     isDirty: false,
     isSaving: false,
     lastSavedAt: null,
+    originalDate: null,
   });
 
   // 创建一个可读的 store 用于 derived
@@ -32,6 +34,7 @@ function createEditorStore() {
       content: post?.content || '',
       isDirty: false,
       lastSavedAt: null,
+      originalDate: post?.frontMatter?.date || null,
     }));
   }
 
@@ -80,6 +83,7 @@ function createEditorStore() {
       isDirty: false,
       isSaving: false,
       lastSavedAt: null,
+      originalDate: null,
     });
   }
 
@@ -128,11 +132,11 @@ function createEditorStore() {
   const fullContent = derived(
     editorStore,
     ($state) => {
-      const { title, content } = $state;
+      const { title, content, originalDate } = $state;
       if (!title) return content;
 
-      const now = new Date();
-      const dateStr = now.toISOString().replace('T', ' ').substring(0, 19);
+      // 如果有原始日期，使用原始日期；否则使用当前时间
+      const dateStr = originalDate || new Date().toISOString().replace('T', ' ').substring(0, 19);
 
       return `---
 title: ${title}

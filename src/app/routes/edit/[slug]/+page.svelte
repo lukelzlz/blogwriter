@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { get } from 'svelte/store';
   import { auth } from '$stores/auth';
   import { editor } from '$stores/editor';
   import { postsApi } from '$lib/api';
@@ -12,7 +13,7 @@
   let loading = true;
   let error = '';
   let showDraftModal = false;
-  let autoSaveInterval: NodeJS.Timeout;
+  let autoSaveInterval: ReturnType<typeof setInterval>;
 
   // 从 URL 获取文章路径
   $: if (typeof window !== 'undefined') {
@@ -94,7 +95,6 @@
         // 添加日志：检查最终状态
         console.log('[DEBUG] 最终 editor.title:', $editor.title);
         console.log('[DEBUG] 最终 editor.content (前200字符):', $editor.content?.substring(0, 200));
-        console.log('[DEBUG] 最终 $editor.fullContent (前200字符):', $editor.fullContent?.substring(0, 200));
       } else {
         error = response.error || '加载文章失败';
       }
@@ -166,22 +166,14 @@
       console.log('[DEBUG] updatePost called with:', {
         slug,
         currentPost: $editor.currentPost,
-        fullContent: $editor.fullContent,
         title: $editor.title,
         content: $editor.content,
       });
 
-      // 手动构建完整内容（包含 front-matter）
-      const now = new Date();
-      const dateStr = now.toISOString().replace('T', ' ').substring(0, 19);
-      const contentToSend = `---
-title: ${$editor.title}
-date: ${dateStr}
----
+      // 使用 editor.fullContent，它已经包含了 front-matter（保留原始日期）
+      const contentToSend = get(editor.fullContent);
 
-${$editor.content}`;
-
-      console.log('[DEBUG] 手动构建的 contentToSend:', contentToSend);
+      console.log('[DEBUG] 使用 fullContent:', contentToSend);
 
       // 检查必要的参数
       if (!contentToSend || !$editor.currentPost.sha) {
@@ -196,6 +188,7 @@ ${$editor.content}`;
       const response = await postsApi.update(
         slug,
         {
+          path: slug,
           content: contentToSend,
           sha: $editor.currentPost.sha,
         },
