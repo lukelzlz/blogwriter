@@ -74,12 +74,21 @@
   // 外部内容更新时同步到编辑器
   $: if (editor && content !== lastExternalContent) {
     console.log('[MarkdownEditor] External content update detected:', content);
-    isInternalUpdate = true;
-    lastExternalContent = content;
-    editor.setValue(content, -1);
-    tick().then(() => {
-      isInternalUpdate = false;
-    });
+    const currentEditorContent = editor.getValue();
+    console.log('[MarkdownEditor] Current editor content:', currentEditorContent);
+    // 只有当外部内容与编辑器当前内容不同时才更新
+    if (content !== currentEditorContent) {
+      console.log('[MarkdownEditor] Updating editor content');
+      isInternalUpdate = true;
+      lastExternalContent = content;
+      editor.setValue(content, -1);
+      tick().then(() => {
+        isInternalUpdate = false;
+      });
+    } else {
+      console.log('[MarkdownEditor] Content matches, skipping update');
+      lastExternalContent = content;
+    }
   }
 
   // 监听 readonly 变化
