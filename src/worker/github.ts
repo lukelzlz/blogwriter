@@ -153,7 +153,8 @@ export async function createOrUpdateFile(
     body.branch = branch;
   }
 
-  const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${path}`;
+  // 对文件名进行 URL 编码
+  const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
   console.log('[DEBUG] createOrUpdateFile URL:', url);
   console.log('[DEBUG] createOrUpdateFile body (partial):', {
     message: body.message,
