@@ -13,10 +13,17 @@
   let editor: any;
   let isInternalUpdate = false;
   let lastExternalContent = '';
+  let lastReadonly = false;
 
   onMount(() => {
+    console.log('[MarkdownEditor] onMount called');
+    console.log('[MarkdownEditor] editorContainer:', editorContainer);
+    console.log('[MarkdownEditor] content:', content);
+    console.log('[MarkdownEditor] readonly:', readonly);
+
     // 初始化 Ace Editor
     editor = ace.edit(editorContainer);
+    console.log('[MarkdownEditor] Ace Editor created:', editor);
 
     // 设置主题
     editor.setTheme('ace/theme/github');
@@ -36,17 +43,24 @@
     // 设置初始内容
     lastExternalContent = content;
     editor.setValue(content, -1);
+    console.log('[MarkdownEditor] Initial content set:', content);
 
-    // 设置只读模式
+    // 设置初始只读模式
+    lastReadonly = readonly;
     editor.setReadOnly(readonly);
+    console.log('[MarkdownEditor] Initial readonly set:', readonly);
 
     // 监听内容变化
     editor.on('change', () => {
+      console.log('[MarkdownEditor] Change event fired, isInternalUpdate:', isInternalUpdate);
       if (!isInternalUpdate && onChange) {
         const newContent = editor.getValue();
+        console.log('[MarkdownEditor] Calling onChange with:', newContent);
         onChange(newContent);
       }
     });
+
+    console.log('[MarkdownEditor] Setup complete');
 
     return () => {
       if (editor) {
@@ -57,6 +71,7 @@
 
   // 外部内容更新时同步到编辑器
   $: if (editor && content !== lastExternalContent) {
+    console.log('[MarkdownEditor] External content update detected:', content);
     isInternalUpdate = true;
     lastExternalContent = content;
     editor.setValue(content, -1);
@@ -66,7 +81,9 @@
   }
 
   // 监听 readonly 变化
-  $: if (editor && readonly !== undefined) {
+  $: if (editor && readonly !== lastReadonly) {
+    console.log('[MarkdownEditor] Readonly changed from', lastReadonly, 'to', readonly);
+    lastReadonly = readonly;
     editor.setReadOnly(readonly);
   }
 
