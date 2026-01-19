@@ -106,11 +106,11 @@ export async function getFileContent(
     throw new Error('Failed to fetch file content');
   }
 
-  const data = await response.json();
-  
-  // Base64 解码
-  const content = atob(data.content);
-  
+  const data: any = await response.json();
+
+  // Base64 解码（使用 UTF-8 编码）
+  const content = decodeURIComponent(escape(atob(data.content)));
+
   return {
     content,
     sha: data.sha,
