@@ -245,8 +245,9 @@
       <div class="editor-content full-width">
         <div class="editor-pane">
           <MarkdownEditor
-            bind:content={$editor.content}
+            content={$editor.content}
             placeholder="开始编写你的文章..."
+            onChange={(content) => editor.setContent(content)}
           />
         </div>
       </div>

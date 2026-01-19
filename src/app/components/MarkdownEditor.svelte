@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import { EditorView, basicSetup } from 'codemirror';
   import { markdown } from '@codemirror/lang-markdown';
   import { oneDark } from '@codemirror/theme-one-dark';
@@ -7,9 +7,11 @@
   export let content = '';
   export let placeholder = '开始编写你的文章...';
   export let readonly = false;
+  export let onChange: ((content: string) => void) | undefined = undefined;
 
   let editorContainer: HTMLDivElement;
   let view: EditorView;
+  let internalUpdate = false;
 
   onMount(() => {
     view = new EditorView({
@@ -35,6 +37,14 @@
             fontSize: '14px',
           },
         }),
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged && !internalUpdate) {
+            const newContent = view.state.doc.toString();
+            if (onChange) {
+              onChange(newContent);
+            }
+          }
+        }),
       ],
       parent: editorContainer,
       readonly,
@@ -46,6 +56,22 @@
       }
     };
   });
+
+  // 外部内容更新时同步到编辑器
+  $: if (view && content !== undefined && !internalUpdate && content !== view.state.doc.toString()) {
+    internalUpdate = true;
+    const transaction = view.state.update({
+      changes: {
+        from: 0,
+        to: view.state.doc.length,
+        insert: content,
+      },
+    });
+    view.dispatch(transaction);
+    tick().then(() => {
+      internalUpdate = false;
+    });
+  }
 
   onDestroy(() => {
     if (view) {
