@@ -22,6 +22,9 @@ export default defineConfig({
       $routes: resolve(__dirname, './src/app/routes'),
     },
   },
+  optimizeDeps: {
+    include: ['ace-builds'],
+  },
   server: {
     port: 5173,
     proxy: {
@@ -38,5 +41,12 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'ace-editor': ['ace-builds'],
+        },
+      },
+    },
   },
 });

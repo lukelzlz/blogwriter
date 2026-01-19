@@ -1,83 +1,109 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
+  import ace from 'ace-builds';
+  import 'ace-builds/src-noconflict/mode-markdown';
+  import 'ace-builds/src-noconflict/theme-github';
+
   export let content = '';
   export let placeholder = '开始编写你的文章...';
   export let readonly = false;
   export let onChange: ((content: string) => void) | undefined = undefined;
 
-  let textarea: HTMLTextAreaElement;
+  let editorContainer: HTMLDivElement;
+  let editor: any;
+  let isInternalUpdate = false;
 
-  function handleInput() {
-    if (onChange) {
-      onChange(textarea.value);
+  onMount(() => {
+    // 初始化 Ace Editor
+    editor = ace.edit(editorContainer);
+
+    // 设置主题
+    editor.setTheme('ace/theme/github');
+
+    // 设置语言模式
+    editor.session.setMode('ace/mode/markdown');
+
+    // 设置字体大小
+    editor.setFontSize(14);
+
+    // 设置自动换行
+    editor.session.setUseWrapMode(true);
+    editor.session.setWrapLimitRange(null, null);
+
+    // 设置占位符
+    if (content) {
+      editor.setValue(content, -1);
     }
+
+    // 设置只读模式
+    editor.setReadOnly(readonly);
+
+    // 显示行号
+    editor.setShowPrintMargin(false);
+
+    // 监听内容变化
+    editor.on('change', () => {
+      if (onChange && !isInternalUpdate) {
+        onChange(editor.getValue());
+      }
+    });
+
+    return () => {
+      if (editor) {
+        editor.destroy();
+      }
+    };
+  });
+
+  // 外部内容更新时同步到编辑器
+  $: if (editor && content !== undefined && content !== editor.getValue() && !isInternalUpdate) {
+    isInternalUpdate = true;
+    const cursorPosition = editor.getCursorPosition();
+    editor.setValue(content, -1);
+    editor.moveCursorToPosition(cursorPosition);
+    setTimeout(() => {
+      isInternalUpdate = false;
+    }, 0);
   }
 
-  function handleKeyDown(event: KeyboardEvent) {
-    if (event.key === 'Tab') {
-      event.preventDefault();
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      textarea.value = textarea.value.substring(0, start) + '  ' + textarea.value.substring(end);
-      textarea.selectionStart = textarea.selectionEnd = start + 2;
-      handleInput();
+  // 监听 readonly 变化
+  $: if (editor && readonly !== undefined) {
+    editor.setReadOnly(readonly);
+  }
+
+  onDestroy(() => {
+    if (editor) {
+      editor.destroy();
     }
-  }
-
-  // 外部内容更新时同步到 textarea
-  $: if (textarea && content !== textarea.value) {
-    textarea.value = content;
-  }
+  });
 </script>
 
-<textarea
-  bind:this={textarea}
-  {readonly}
-  {placeholder}
-  on:input={handleInput}
-  on:keydown={handleKeyDown}
-  class="editor-textarea"
-></textarea>
+<div bind:this={editorContainer} class="editor-container"></div>
 
 <style>
-  .editor-textarea {
+  .editor-container {
     width: 100%;
     height: 100%;
-    padding: 16px;
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
-    outline: none;
-    resize: none;
+    overflow: hidden;
+  }
+
+  :global(.ace_editor) {
     font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
     font-size: 14px;
     line-height: 1.6;
-    background: #ffffff;
-    color: #1f2937;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    overflow-y: auto;
-    box-sizing: border-box;
   }
 
-  .editor-textarea::placeholder {
-    color: #9ca3af;
-  }
-
-  .editor-textarea:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-
-  .editor-textarea:read-only {
+  :global(.ace_gutter) {
     background: #f9fafb;
-    cursor: default;
+    color: #6b7280;
   }
 
   /* 移动端适配 */
   @media (max-width: 768px) {
-    .editor-textarea {
+    :global(.ace_editor) {
       font-size: 16px;
-      padding: 12px;
-      line-height: 1.5;
     }
   }
 </style>

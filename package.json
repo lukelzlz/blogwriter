@@ -37,6 +37,7 @@
     "@codemirror/state": "^6.4.1",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.34.1",
+    "ace-builds": "^1.43.5",
     "codemirror": "^6.0.1",
     "marked": "^14.1.2",
     "svelte-routing": "^2.13.0"
