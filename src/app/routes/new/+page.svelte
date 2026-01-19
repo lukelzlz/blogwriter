@@ -75,7 +75,7 @@
 <div class="editor-page">
   <div class="editor-container">
     <!-- 工具栏 -->
-    <div class="toolbar bg-white border-b border-gray-200 p-4 flex items-center justify-between sticky top-16 z-10">
+    <div class="toolbar bg-white border-b border-gray-200 p-4 flex items-center justify-between">
       <div class="flex items-center space-x-4 flex-1">
         <input
           type="text"
