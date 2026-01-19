@@ -1,109 +1,118 @@
 <script lang="ts">
-  import { onMount, onDestroy, tick } from 'svelte';
-  import { EditorView, basicSetup } from 'codemirror';
-  import { markdown } from '@codemirror/lang-markdown';
-  import { oneDark } from '@codemirror/theme-one-dark';
-
   export let content = '';
   export let placeholder = '开始编写你的文章...';
   export let readonly = false;
   export let onChange: ((content: string) => void) | undefined = undefined;
 
-  let editorContainer: HTMLDivElement;
-  let view: EditorView;
-  let internalUpdate = false;
+  let textarea: HTMLTextAreaElement;
+  let lineNumbers: HTMLDivElement;
 
-  onMount(() => {
-    console.log('[MarkdownEditor] onMount called, content:', content);
-    console.log('[MarkdownEditor] editorContainer:', editorContainer);
-    console.log('[MarkdownEditor] readonly:', readonly);
+  function updateLineNumbers() {
+    if (!textarea || !lineNumbers) return;
 
-    view = new EditorView({
-      doc: content,
-      extensions: [
-        basicSetup,
-        markdown(),
-        oneDark,
-        EditorView.theme({
-          '&': {
-            height: '100%',
-          },
-          '.cm-scroller': {
-            overflow: 'auto',
-          },
-          '.cm-content': {
-            padding: '20px',
-            fontFamily: '"Fira Code", monospace',
-            fontSize: '14px',
-            lineHeight: '1.6',
-          },
-          '.cm-editor': {
-            fontSize: '14px',
-          },
-        }),
-        EditorView.updateListener.of((update) => {
-          console.log('[MarkdownEditor] Update listener called, docChanged:', update.docChanged, 'internalUpdate:', internalUpdate);
-          if (update.docChanged && !internalUpdate) {
-            const newContent = view.state.doc.toString();
-            console.log('[MarkdownEditor] Content changed, calling onChange');
-            if (onChange) {
-              onChange(newContent);
-            }
-          }
-        }),
-      ],
-      parent: editorContainer,
-      readonly,
-    });
-
-    console.log('[MarkdownEditor] EditorView created:', view);
-
-    return () => {
-      if (view) {
-        view.destroy();
-      }
-    };
-  });
-
-  // 外部内容更新时同步到编辑器
-  $: if (view && content !== undefined && !internalUpdate && content !== view.state.doc.toString()) {
-    console.log('[MarkdownEditor] External content update detected');
-    internalUpdate = true;
-    const transaction = view.state.update({
-      changes: {
-        from: 0,
-        to: view.state.doc.length,
-        insert: content,
-      },
-    });
-    view.dispatch(transaction);
-    tick().then(() => {
-      internalUpdate = false;
-    });
+    const lines = textarea.value.split('\n').length;
+    lineNumbers.innerHTML = Array.from({ length: lines }, (_, i) => i + 1).join('<br>');
   }
 
-  onDestroy(() => {
-    if (view) {
-      view.destroy();
+  function handleInput() {
+    if (onChange) {
+      onChange(textarea.value);
     }
-  });
+    updateLineNumbers();
+  }
+
+  function handleScroll() {
+    if (lineNumbers && textarea) {
+      lineNumbers.scrollTop = textarea.scrollTop;
+    }
+  }
+
+  function syncScroll() {
+    if (lineNumbers && textarea) {
+      textarea.scrollTop = lineNumbers.scrollTop;
+    }
+  }
+
+  function handleKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      textarea.value = textarea.value.substring(0, start) + '  ' + textarea.value.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = start + 2;
+      handleInput();
+    }
+  }
+
+  // 外部内容更新时同步到 textarea
+  $: if (textarea && content !== textarea.value) {
+    textarea.value = content;
+    updateLineNumbers();
+  }
 </script>
 
-<div bind:this={editorContainer} class="markdown-editor h-full"></div>
+<div class="editor-container">
+  <div class="line-numbers" bind:this={lineNumbers} on:scroll={syncScroll}>
+    1
+  </div>
+  <textarea
+    bind:this={textarea}
+    {readonly}
+    {placeholder}
+    on:input={handleInput}
+    on:scroll={handleScroll}
+    on:keydown={handleKeyDown}
+    class="editor-textarea"
+  ></textarea>
+</div>
 
 <style>
-  .markdown-editor {
+  .editor-container {
+    display: flex;
+    height: 100%;
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
     overflow: hidden;
+    background: #ffffff;
   }
 
-  .markdown-editor :global(.cm-editor) {
-    height: 100%;
+  .line-numbers {
+    min-width: 50px;
+    max-width: 50px;
+    padding: 16px 8px;
+    text-align: right;
+    background: #f9fafb;
+    border-right: 1px solid #e5e7eb;
+    color: #6b7280;
+    font-family: 'Fira Code', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    user-select: none;
+    overflow: hidden;
   }
 
-  .markdown-editor :global(.cm-scroller) {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-      sans-serif;
+  .editor-textarea {
+    flex: 1;
+    padding: 16px;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: 'Fira Code', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    background: #ffffff;
+    color: #1f2937;
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
+  }
+
+  .editor-textarea::placeholder {
+    color: #9ca3af;
+  }
+
+  .editor-textarea:read-only {
+    background: #f9fafb;
+    cursor: default;
   }
 </style>
