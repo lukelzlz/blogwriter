@@ -139,9 +139,10 @@ export async function createOrUpdateFile(
     branch,
   });
 
+  // 使用正确的方法编码包含 Unicode 字符的内容
   const body: any = {
     message,
-    content: btoa(content),
+    content: btoa(unescape(encodeURIComponent(content))),
   };
 
   if (sha) {
