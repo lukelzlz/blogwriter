@@ -5,32 +5,10 @@
   export let onChange: ((content: string) => void) | undefined = undefined;
 
   let textarea: HTMLTextAreaElement;
-  let lineNumbers: HTMLDivElement;
-  let isInternalUpdate = false;
-
-  function updateLineNumbers() {
-    if (!textarea || !lineNumbers) return;
-
-    const lines = textarea.value.split('\n').length;
-    lineNumbers.innerHTML = Array.from({ length: lines }, (_, i) => i + 1).join('<br>');
-  }
 
   function handleInput() {
-    if (onChange && !isInternalUpdate) {
+    if (onChange) {
       onChange(textarea.value);
-    }
-    updateLineNumbers();
-  }
-
-  function handleScroll() {
-    if (lineNumbers && textarea) {
-      lineNumbers.scrollTop = textarea.scrollTop;
-    }
-  }
-
-  function syncScroll() {
-    if (lineNumbers && textarea) {
-      textarea.scrollTop = lineNumbers.scrollTop;
     }
   }
 
@@ -46,78 +24,60 @@
   }
 
   // 外部内容更新时同步到 textarea
-  $: if (textarea && content !== undefined && content !== textarea.value && !isInternalUpdate) {
-    isInternalUpdate = true;
+  $: if (textarea && content !== textarea.value) {
     textarea.value = content;
-    updateLineNumbers();
-    setTimeout(() => {
-      isInternalUpdate = false;
-    }, 0);
   }
 </script>
 
-<div class="editor-container">
-  <div class="line-numbers" bind:this={lineNumbers} on:scroll={syncScroll}>
-    1
-  </div>
-  <textarea
-    bind:this={textarea}
-    {readonly}
-    {placeholder}
-    on:input={handleInput}
-    on:scroll={handleScroll}
-    on:keydown={handleKeyDown}
-    class="editor-textarea"
-  ></textarea>
-</div>
+<textarea
+  bind:this={textarea}
+  {readonly}
+  {placeholder}
+  on:input={handleInput}
+  on:keydown={handleKeyDown}
+  class="editor-textarea"
+></textarea>
 
 <style>
-  .editor-container {
-    display: flex;
+  .editor-textarea {
+    width: 100%;
     height: 100%;
+    padding: 16px;
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
-    overflow: hidden;
-    background: #ffffff;
-  }
-
-  .line-numbers {
-    min-width: 50px;
-    max-width: 50px;
-    padding: 16px 8px;
-    text-align: right;
-    background: #f9fafb;
-    border-right: 1px solid #e5e7eb;
-    color: #6b7280;
-    font-family: 'Fira Code', monospace;
-    font-size: 14px;
-    line-height: 1.6;
-    user-select: none;
-    overflow: hidden;
-  }
-
-  .editor-textarea {
-    flex: 1;
-    padding: 16px;
-    border: none;
     outline: none;
     resize: none;
-    font-family: 'Fira Code', monospace;
+    font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
     font-size: 14px;
     line-height: 1.6;
     background: #ffffff;
     color: #1f2937;
-    white-space: pre;
-    overflow-wrap: normal;
-    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-y: auto;
+    box-sizing: border-box;
   }
 
   .editor-textarea::placeholder {
     color: #9ca3af;
   }
 
+  .editor-textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
   .editor-textarea:read-only {
     background: #f9fafb;
     cursor: default;
+  }
+
+  /* 移动端适配 */
+  @media (max-width: 768px) {
+    .editor-textarea {
+      font-size: 16px;
+      padding: 12px;
+      line-height: 1.5;
+    }
   }
 </style>
