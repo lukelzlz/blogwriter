@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import ace from 'ace-builds';
   import 'ace-builds/src-noconflict/mode-markdown';
   import 'ace-builds/src-noconflict/theme-github';
@@ -12,6 +12,7 @@
   let editorContainer: HTMLDivElement;
   let editor: any;
   let isInternalUpdate = false;
+  let lastExternalContent = '';
 
   onMount(() => {
     // 初始化 Ace Editor
@@ -28,23 +29,22 @@
 
     // 设置自动换行
     editor.session.setUseWrapMode(true);
-    editor.session.setWrapLimitRange(null, null);
 
-    // 设置占位符
-    if (content) {
-      editor.setValue(content, -1);
-    }
+    // 隐藏打印边距
+    editor.setShowPrintMargin(false);
+
+    // 设置初始内容
+    lastExternalContent = content;
+    editor.setValue(content, -1);
 
     // 设置只读模式
     editor.setReadOnly(readonly);
 
-    // 显示行号
-    editor.setShowPrintMargin(false);
-
     // 监听内容变化
     editor.on('change', () => {
-      if (onChange && !isInternalUpdate) {
-        onChange(editor.getValue());
+      if (!isInternalUpdate && onChange) {
+        const newContent = editor.getValue();
+        onChange(newContent);
       }
     });
 
@@ -56,14 +56,13 @@
   });
 
   // 外部内容更新时同步到编辑器
-  $: if (editor && content !== undefined && content !== editor.getValue() && !isInternalUpdate) {
+  $: if (editor && content !== lastExternalContent) {
     isInternalUpdate = true;
-    const cursorPosition = editor.getCursorPosition();
+    lastExternalContent = content;
     editor.setValue(content, -1);
-    editor.moveCursorToPosition(cursorPosition);
-    setTimeout(() => {
+    tick().then(() => {
       isInternalUpdate = false;
-    }, 0);
+    });
   }
 
   // 监听 readonly 变化
