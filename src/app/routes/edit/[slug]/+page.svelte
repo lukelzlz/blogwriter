@@ -63,7 +63,8 @@
       const response = await postsApi.get(slug, 'main', $auth.repo?.owner, $auth.repo?.name);
 
       if (response.success && response.data) {
-        const post = response.data;
+        // API 返回的数据结构是 { data: post }，所以需要访问 response.data.data
+        const post = (response.data as any).data || response.data;
 
         // 添加日志：检查原始数据
         console.log('[DEBUG] 原始 post 数据:', post);
