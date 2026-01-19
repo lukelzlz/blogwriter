@@ -64,11 +64,30 @@
 
       if (response.success && response.data) {
         const post = response.data;
+
+        // 添加日志：检查原始数据
+        console.log('[DEBUG] 原始 post 数据:', post);
+        console.log('[DEBUG] post.content (前200字符):', post.content?.substring(0, 200));
+        console.log('[DEBUG] post.frontMatter:', post.frontMatter);
+
         const { title, body } = parseFrontMatter(post.content || '');
 
+        // 添加日志：检查解析结果
+        console.log('[DEBUG] 解析后的 title:', title);
+        console.log('[DEBUG] 解析后的 body (前200字符):', body?.substring(0, 200));
+
         editor.setCurrentPost(post);
+
+        // 添加日志：检查 setCurrentPost 后的状态
+        console.log('[DEBUG] setCurrentPost 后的 editor.title:', $editor.title);
+        console.log('[DEBUG] setCurrentPost 后的 editor.content (前200字符):', $editor.content?.substring(0, 200));
+
         editor.setTitle(title || '');
         editor.setContent(body);
+
+        // 添加日志：检查最终状态
+        console.log('[DEBUG] 最终 editor.title:', $editor.title);
+        console.log('[DEBUG] 最终 editor.content (前200字符):', $editor.content?.substring(0, 200));
       } else {
         error = response.error || '加载文章失败';
       }
