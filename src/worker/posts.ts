@@ -258,19 +258,27 @@ export async function handlePosts(
   // PUT /api/posts/:path - 更新文章
   if (path.startsWith('/api/posts/') && request.method === 'PUT') {
     const postPath = path.substring('/api/posts/'.length);
-    
+
     try {
       const params: UpdatePostParams = await request.json();
-      
+
+      console.log('[DEBUG] PUT /api/posts/:path - params:', params);
+      console.log('[DEBUG] PUT /api/posts/:path - params.content:', params.content);
+      console.log('[DEBUG] PUT /api/posts/:path - params.sha:', params.sha);
+
       if (!params.content || !params.sha) {
+        console.error('[DEBUG] Missing required params:', {
+          content: params.content,
+          sha: params.sha,
+        });
         return new Response(JSON.stringify({ error: 'Content and sha are required' }), {
           status: 400,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
       }
-      
+
       const post = await updatePost(owner, repo, { ...params, path: postPath }, session.accessToken, branch);
-      
+
       return new Response(JSON.stringify({ data: post }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });

@@ -62,12 +62,15 @@
     try {
       const response = await postsApi.get(slug, 'main', $auth.repo?.owner, $auth.repo?.name);
 
+      console.log('[DEBUG] loadPost - response:', response);
+
       if (response.success && response.data) {
         // API 返回的数据结构是 { data: post }，所以需要访问 response.data.data
         const post = (response.data as any).data || response.data;
 
         // 添加日志：检查原始数据
         console.log('[DEBUG] 原始 post 数据:', post);
+        console.log('[DEBUG] post.sha:', post.sha);
         console.log('[DEBUG] post.content (前200字符):', post.content?.substring(0, 200));
         console.log('[DEBUG] post.frontMatter:', post.frontMatter);
 
@@ -80,6 +83,8 @@
         editor.setCurrentPost(post);
 
         // 添加日志：检查 setCurrentPost 后的状态
+        console.log('[DEBUG] setCurrentPost 后的 $editor.currentPost:', $editor.currentPost);
+        console.log('[DEBUG] setCurrentPost 后的 $editor.currentPost?.sha:', $editor.currentPost?.sha);
         console.log('[DEBUG] setCurrentPost 后的 editor.title:', $editor.title);
         console.log('[DEBUG] setCurrentPost 后的 editor.content (前200字符):', $editor.content?.substring(0, 200));
 
@@ -89,6 +94,7 @@
         // 添加日志：检查最终状态
         console.log('[DEBUG] 最终 editor.title:', $editor.title);
         console.log('[DEBUG] 最终 editor.content (前200字符):', $editor.content?.substring(0, 200));
+        console.log('[DEBUG] 最终 $editor.fullContent (前200字符):', $editor.fullContent?.substring(0, 200));
       } else {
         error = response.error || '加载文章失败';
       }
@@ -130,7 +136,9 @@
           content: $editor.content,
           path: $auth.postsPath || 'source/_posts',
         },
-        'main'
+        'main',
+        $auth.repo?.owner,
+        $auth.repo?.name
       );
 
       if (response.success && response.data) {
@@ -155,6 +163,24 @@
     editor.setSaving(true);
 
     try {
+      console.log('[DEBUG] updatePost called with:', {
+        slug,
+        currentPost: $editor.currentPost,
+        fullContent: $editor.fullContent,
+        title: $editor.title,
+        content: $editor.content,
+      });
+
+      // 检查必要的参数
+      if (!$editor.fullContent || !$editor.currentPost.sha) {
+        console.error('[DEBUG] Missing required parameters:', {
+          fullContent: $editor.fullContent,
+          sha: $editor.currentPost.sha,
+        });
+        alert('保存失败: 缺少必要参数');
+        return;
+      }
+
       const response = await postsApi.update(
         slug,
         {

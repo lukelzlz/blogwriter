@@ -107,12 +107,18 @@ export const postsApi = {
 
   // 更新文章
   async update(path: string, params: UpdatePostParams, branch?: string, owner?: string, repo?: string) {
+    console.log('[DEBUG] postsApi.update called with:', { path, params, branch, owner, repo });
+
     const queryParams = new URLSearchParams();
     if (branch) queryParams.set('branch', branch);
     if (owner) queryParams.set('owner', owner);
     if (repo) queryParams.set('repo', repo);
 
-    return request<Post>(`/api/posts/${encodeURIComponent(path)}?${queryParams.toString()}`, {
+    const url = `/api/posts/${encodeURIComponent(path)}?${queryParams.toString()}`;
+    console.log('[DEBUG] Request URL:', url);
+    console.log('[DEBUG] Request body:', JSON.stringify(params));
+
+    return request<Post>(url, {
       method: 'PUT',
       body: JSON.stringify(params),
     });
