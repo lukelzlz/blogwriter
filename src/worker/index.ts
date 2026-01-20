@@ -20,9 +20,11 @@ export default {
     // 允许的来源列表
     const allowedOrigins = [
       'https://writer.qwqc.cc',
-      // 可以添加其他允许的来源，例如本地开发环境
-      // 'http://localhost:5173',
-      // 'http://localhost:3000',
+      // 本地开发环境
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:3000',
     ];
     
     // 验证来源是否在允许列表中

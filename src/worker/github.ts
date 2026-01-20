@@ -49,6 +49,11 @@ export async function getRepoBranches(
   return response.json();
 }
 
+// 辅助函数：正确编码路径（只编码各个部分，保留 /）
+function encodePathForGitHub(path: string): string {
+  return path.split('/').map(encodeURIComponent).join('/');
+}
+
 // 获取目录内容
 export async function getDirectoryContents(
   owner: string,
@@ -57,7 +62,7 @@ export async function getDirectoryContents(
   accessToken: string,
   branch?: string
 ): Promise<GitHubFile[]> {
-  const url = new URL(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`);
+  const url = new URL(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodePathForGitHub(path)}`);
   if (branch) {
     url.searchParams.set('ref', branch);
   }
@@ -87,7 +92,7 @@ export async function getFileContent(
   accessToken: string,
   branch?: string
 ): Promise<{ content: string; sha: string }> {
-  const url = new URL(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`);
+  const url = new URL(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodePathForGitHub(path)}`);
   if (branch) {
     url.searchParams.set('ref', branch);
   }
@@ -109,8 +114,10 @@ export async function getFileContent(
   const data: any = await response.json();
 
   // Base64 解码（使用 UTF-8 编码）
-  // 使用 escape/unescape 方法处理 Unicode 字符
-  const content = decodeURIComponent(escape(atob(data.content)));
+  // 使用 TextDecoder 处理 Unicode 字符（替代已弃用的 escape/unescape）
+  const binaryString = atob(data.content.replace(/\s/g, ''));
+  const bytes = Uint8Array.from(binaryString, (char) => char.charCodeAt(0));
+  const content = new TextDecoder('utf-8').decode(bytes);
 
   return {
     content,
@@ -140,11 +147,13 @@ export async function createOrUpdateFile(
     branch,
   });
 
-  // 使用正确的方法编码包含 Unicode 字符的内容
-  // 使用 unescape/encodeURIComponent 方法处理 Unicode 字符
+  // 使用 TextEncoder 编码包含 Unicode 字符的内容（替代已弃用的 unescape/encodeURIComponent）
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(content);
+  const binaryString = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
   const body: any = {
     message,
-    content: btoa(unescape(encodeURIComponent(content))),
+    content: btoa(binaryString),
   };
 
   if (sha) {
@@ -155,8 +164,8 @@ export async function createOrUpdateFile(
     body.branch = branch;
   }
 
-  // 对文件名进行 URL 编码
-  const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+  // 对文件路径进行 URL 编码（只编码各个部分，保留 /）
+  const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodePathForGitHub(path)}`;
   console.log('[DEBUG] createOrUpdateFile URL:', url);
   console.log('[DEBUG] createOrUpdateFile body (partial):', {
     message: body.message,
@@ -195,7 +204,7 @@ export async function createOrUpdateFile(
     throw new Error(`Failed to create/update file: ${error.message || errorText}`);
   }
 
-  const result = await response.json();
+  const result = await response.json() as { content: GitHubFile; commit: { sha: string } };
   console.log('[DEBUG] createOrUpdateFile result:', result);
   return result;
 }
@@ -219,8 +228,8 @@ export async function deleteFile(
     body.branch = branch;
   }
 
-  // 对文件名进行 URL 编码，与 createOrUpdateFile 保持一致
-  const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+  // 对文件路径进行 URL 编码，与 createOrUpdateFile 保持一致
+  const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodePathForGitHub(path)}`;
 
   const response = await fetch(url, {
     method: 'DELETE',

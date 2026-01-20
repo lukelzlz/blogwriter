@@ -131,7 +131,9 @@
           </button>
           <button
             on:click={() => {
-              onDelete(showDeleteConfirm);
+              if (showDeleteConfirm) {
+                onDelete(showDeleteConfirm);
+              }
               showDeleteConfirm = null;
             }}
             class="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-md transition"

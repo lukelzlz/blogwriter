@@ -1,6 +1,8 @@
 <script lang="ts">
   import LoginButton from '$components/LoginButton.svelte';
 
+  // navigate 参数由 App.svelte 传入，保留以保持接口一致性
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   export let navigate: (path: string) => void = () => {};
 </script>
 

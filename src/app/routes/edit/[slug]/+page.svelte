@@ -221,13 +221,14 @@
     }
   }
 
-  function restoreDraft() {
+  async function restoreDraft() {
     const draft = editor.loadFromLocal(slug);
     if (draft) {
-      // 清空 currentPost，因为草稿可能已经与服务器版本不同步
-      editor.setCurrentPost(null);
-      editor.setTitle(draft.title, false);
-      editor.setContent(draft.content, false);
+      // 先加载原文章获取最新的 sha，然后应用草稿内容
+      await loadPost();
+      // 应用草稿内容并标记为已修改
+      editor.setTitle(draft.title, true);
+      editor.setContent(draft.content, true);
     }
     showDraftModal = false;
   }

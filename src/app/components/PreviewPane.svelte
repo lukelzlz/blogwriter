@@ -13,7 +13,17 @@
     });
   });
 
-  $: htmlContent = marked.parse(content);
+  // 处理 marked.parse() 可能返回 Promise 的情况
+  $: {
+    const result = marked.parse(content);
+    if (result instanceof Promise) {
+      result.then((html) => {
+        htmlContent = html;
+      });
+    } else {
+      htmlContent = result;
+    }
+  }
 </script>
 
 <div bind:this={previewContainer} class="markdown-preview">
