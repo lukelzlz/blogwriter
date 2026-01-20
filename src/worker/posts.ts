@@ -98,6 +98,25 @@ export async function getPost(
 ): Promise<Post> {
   const { content, sha } = await getFileContent(owner, repo, path, accessToken, branch);
   
+  // 解析 front-matter
+  const frontMatterRegex = /^---\n([\s\S]*?)\n---/;
+  const match = content.match(frontMatterRegex);
+  
+  let frontMatter = undefined;
+  if (match) {
+    const frontMatterText = match[1];
+    const titleMatch = frontMatterText.match(/^title:\s*(.+)$/m);
+    const dateMatch = frontMatterText.match(/^date:\s*(.+)$/m);
+    
+    // 只有当 title 和 date 都存在时才设置 frontMatter
+    if (titleMatch && dateMatch) {
+      frontMatter = {
+        title: titleMatch[1].trim(),
+        date: dateMatch[1].trim(),
+      };
+    }
+  }
+  
   return {
     path,
     name: path.split('/').pop() || '',
@@ -105,6 +124,7 @@ export async function getPost(
     size: content.length,
     url: `https://github.com/${owner}/${repo}/blob/${branch || 'main'}/${path}`,
     content,
+    frontMatter,
   };
 }
 
