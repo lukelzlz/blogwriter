@@ -32,7 +32,7 @@ function createEditorStore() {
       ...state,
       currentPost: post,
       title: post?.frontMatter?.title || '',
-      content: post?.content || '',
+      content: '', // 初始化为空，后续会通过 setContent 设置为 body
       isDirty: false,
       lastSavedAt: null,
       originalDate: post?.frontMatter?.date || null,
