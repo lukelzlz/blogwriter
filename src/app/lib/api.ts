@@ -1,5 +1,5 @@
 import { auth } from '$stores/auth';
-import type { Post, CreatePostParams, UpdatePostParams, ApiResponse } from '$shared/types';
+import type { Post, CreatePostParams, UpdatePostParams, ApiResponse, ImageUploadParams, ImageUploadResponse } from '$shared/types';
 
 // API 基础 URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -157,5 +157,16 @@ export const repoApi = {
   // 获取分支列表
   async getBranches(owner: string, repo: string) {
     return request<any[]>(`/api/repo/branches?owner=${owner}&repo=${repo}`);
+  },
+};
+
+// 图片上传 API
+export const imageApi = {
+  // 上传图片到 S3 兼容存储
+  async upload(params: ImageUploadParams): Promise<ApiResponse<ImageUploadResponse>> {
+    return request<ImageUploadResponse>('/api/upload', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
   },
 };

@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { auth } from '$stores/auth';
   import { editor } from '$stores/editor';
-  import { postsApi } from '$lib/api';
+  import { postsApi, imageApi } from '$lib/api';
   import MarkdownEditor from '$components/MarkdownEditor.svelte';
 
   export let navigate: (path: string) => void = () => {};
@@ -70,6 +70,48 @@
       await handleSave();
     }
   }
+
+  // 图片上传处理
+  async function handleImageUpload(file: Blob): Promise<string | null> {
+    const s3Config = $auth.s3Config;
+    if (!s3Config) {
+      alert('请先在设置页面配置图床');
+      return null;
+    }
+
+    try {
+      // 将 Blob 转换为 Base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // 移除 data URL 前缀，只保留 base64 数据
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const response = await imageApi.upload({
+        imageData: base64,
+        mimeType: file.type || 'image/png',
+        config: s3Config,
+      });
+
+      if (response.success && response.data) {
+        return response.data.url;
+      } else {
+        console.error('Image upload failed:', response.error);
+        alert('图片上传失败: ' + (response.error || '未知错误'));
+        return null;
+      }
+    } catch (err) {
+      console.error('Image upload error:', err);
+      alert('图片上传失败');
+      return null;
+    }
+  }
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -109,6 +151,7 @@
         <MarkdownEditor
           content={$editor.content}
           onChange={(content) => editor.setContent(content)}
+          onImageUpload={$auth.s3Config ? handleImageUpload : undefined}
         />
       </div>
     </div>

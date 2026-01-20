@@ -8,12 +8,16 @@
   export let placeholder = '开始编写你的文章...';
   export let readonly = false;
   export let onChange: ((content: string) => void) | undefined = undefined;
+  export let onImageUpload: ((file: Blob) => Promise<string | null>) | undefined = undefined;
 
   let editorContainer: HTMLDivElement;
+  let wrapperContainer: HTMLDivElement;
   let editor: any;
   let isInternalUpdate = false;
   let lastExternalContent = '';
   let lastReadonly = false;
+  let isDragging = false;
+  let isUploading = false;
 
   onMount(() => {
     console.log('[MarkdownEditor] onMount called');
@@ -62,14 +66,173 @@
       }
     });
 
+    // 监听粘贴事件
+    editor.container.addEventListener('paste', handlePaste);
+
     console.log('[MarkdownEditor] Setup complete');
 
     return () => {
       if (editor) {
+        editor.container.removeEventListener('paste', handlePaste);
         editor.destroy();
       }
     };
   });
+
+  // 粘贴事件处理
+  function handlePaste(event: ClipboardEvent) {
+    const items = event.clipboardData?.items;
+    if (!items || !onImageUpload) return;
+
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        event.preventDefault();
+        event.stopPropagation();
+        const blob = item.getAsFile();
+        if (blob) {
+          uploadAndInsert(blob);
+        }
+        break;
+      }
+    }
+  }
+
+  // 拖拽进入
+  function handleDragEnter(event: DragEvent) {
+    event.preventDefault();
+    if (hasImageFile(event) && onImageUpload) {
+      isDragging = true;
+    }
+  }
+
+  // 拖拽悬停
+  function handleDragOver(event: DragEvent) {
+    event.preventDefault();
+    if (hasImageFile(event) && onImageUpload) {
+      event.dataTransfer!.dropEffect = 'copy';
+    }
+  }
+
+  // 拖拽离开
+  function handleDragLeave(event: DragEvent) {
+    event.preventDefault();
+    // 检查是否真的离开了容器
+    const rect = wrapperContainer.getBoundingClientRect();
+    const x = event.clientX;
+    const y = event.clientY;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      isDragging = false;
+    }
+  }
+
+  // 放下文件
+  function handleDrop(event: DragEvent) {
+    event.preventDefault();
+    isDragging = false;
+    
+    if (!onImageUpload) return;
+    
+    const files = event.dataTransfer?.files;
+    if (files) {
+      for (const file of files) {
+        if (file.type.startsWith('image/')) {
+          uploadAndInsert(file);
+          break; // 只处理第一个图片
+        }
+      }
+    }
+  }
+
+  // 检查是否有图片文件
+  function hasImageFile(event: DragEvent): boolean {
+    const types = event.dataTransfer?.types;
+    if (types?.includes('Files')) {
+      // 在 dragenter/dragover 时无法直接访问文件类型
+      // 所以只检查是否有文件
+      return true;
+    }
+    return false;
+  }
+
+  // 在光标位置插入文本
+  function insertTextAtCursor(text: string) {
+    if (!editor) return;
+    isInternalUpdate = true;
+    editor.insert(text);
+    tick().then(() => {
+      isInternalUpdate = false;
+      // 触发 onChange
+      if (onChange) {
+        const newContent = editor.getValue();
+        lastExternalContent = newContent;
+        onChange(newContent);
+      }
+    });
+  }
+
+  // 上传并插入
+  async function uploadAndInsert(blob: Blob) {
+    if (!onImageUpload || !editor) return;
+    
+    isUploading = true;
+    
+    // 1. 在光标位置插入占位符
+    const placeholderId = Date.now();
+    const placeholder = `![上传中...](uploading-${placeholderId})`;
+    insertTextAtCursor(placeholder);
+    
+    try {
+      // 2. 上传图片
+      const url = await onImageUpload(blob);
+      
+      // 3. 替换占位符
+      if (url) {
+        const currentContent = editor.getValue();
+        const newContent = currentContent.replace(placeholder, `![](${url})`);
+        isInternalUpdate = true;
+        const cursorPos = editor.getCursorPosition();
+        editor.setValue(newContent, -1);
+        // 尝试恢复光标位置
+        editor.moveCursorToPosition(cursorPos);
+        lastExternalContent = newContent;
+        tick().then(() => {
+          isInternalUpdate = false;
+          if (onChange) {
+            onChange(newContent);
+          }
+        });
+      } else {
+        // 上传失败，移除占位符
+        const currentContent = editor.getValue();
+        const newContent = currentContent.replace(placeholder, '');
+        isInternalUpdate = true;
+        editor.setValue(newContent, -1);
+        lastExternalContent = newContent;
+        tick().then(() => {
+          isInternalUpdate = false;
+          if (onChange) {
+            onChange(newContent);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      // 上传失败，移除占位符
+      const currentContent = editor.getValue();
+      const newContent = currentContent.replace(placeholder, '');
+      isInternalUpdate = true;
+      editor.setValue(newContent, -1);
+      lastExternalContent = newContent;
+      tick().then(() => {
+        isInternalUpdate = false;
+        if (onChange) {
+          onChange(newContent);
+        }
+      });
+    } finally {
+      isUploading = false;
+    }
+  }
 
   // 外部内容更新时同步到编辑器
   $: if (editor && content !== lastExternalContent) {
@@ -104,20 +267,120 @@
 
   onDestroy(() => {
     if (editor) {
+      editor.container.removeEventListener('paste', handlePaste);
       editor.destroy();
     }
   });
 </script>
 
-<div bind:this={editorContainer} class="editor-container"></div>
+<div 
+  bind:this={wrapperContainer}
+  class="editor-wrapper"
+  class:dragging={isDragging}
+  on:dragenter={handleDragEnter}
+  on:dragover={handleDragOver}
+  on:dragleave={handleDragLeave}
+  on:drop={handleDrop}
+>
+  <div bind:this={editorContainer} class="editor-container"></div>
+  
+  {#if isDragging}
+    <div class="drag-overlay">
+      <div class="drag-hint">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
+        <span>释放以上传图片</span>
+      </div>
+    </div>
+  {/if}
+  
+  {#if isUploading}
+    <div class="upload-indicator">
+      <div class="upload-spinner"></div>
+      <span>上传中...</span>
+    </div>
+  {/if}
+</div>
 
 <style>
+  .editor-wrapper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
   .editor-container {
     width: 100%;
     height: 100%;
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
     overflow: hidden;
+  }
+
+  .editor-wrapper.dragging .editor-container {
+    border: 2px dashed #3b82f6;
+  }
+
+  .drag-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(59, 130, 246, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 10;
+    border-radius: 0.5rem;
+  }
+
+  .drag-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: #3b82f6;
+    font-size: 1.125rem;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 1.5rem 2rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  .upload-indicator {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(59, 130, 246, 0.9);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    z-index: 10;
+  }
+
+  .upload-spinner {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   :global(.ace_editor) {

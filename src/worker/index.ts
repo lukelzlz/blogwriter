@@ -1,6 +1,7 @@
 import { handleAuth } from './auth';
 import { handlePosts } from './posts';
 import { handleRepo } from './github';
+import { handleUpload } from './upload';
 
 export interface Env {
   SESSIONS: KVNamespace;
@@ -66,6 +67,11 @@ export default {
 
       if (path.startsWith('/api/repo')) {
         return handleRepo(request, env, ctx, corsHeaders);
+      }
+
+      // 图片上传路由
+      if (path === '/api/upload') {
+        return handleUpload(request, env, ctx, corsHeaders);
       }
 
       // For static files, redirect to Cloudflare Pages

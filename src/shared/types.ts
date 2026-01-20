@@ -86,3 +86,40 @@ export interface UpdatePostParams {
   content: string;
   sha: string;
 }
+
+// S3 兼容存储配置
+export interface S3Config {
+  provider: string;           // 服务商标识：aws, aliyun, tencent, qiniu, r2, minio, custom
+  endpoint: string;           // S3 endpoint URL
+  region: string;             // 区域
+  accessKeyId: string;        // Access Key ID
+  secretAccessKey: string;    // Secret Access Key
+  bucket: string;             // 存储桶名称
+  publicUrl: string;          // 公开访问 URL 前缀（CDN 域名）
+  pathPrefix: string;         // 路径前缀，如 blog/images
+  forcePathStyle: boolean;    // 是否使用路径风格（MinIO 等需要）
+}
+
+// 预设服务商配置
+export interface S3ProviderPreset {
+  name: string;               // 显示名称
+  regions: Array<{
+    id: string;
+    name: string;
+    endpoint: string;
+  }>;
+  forcePathStyle: boolean;
+}
+
+// 图片上传请求参数
+export interface ImageUploadParams {
+  imageData: string;          // Base64 编码的图片数据
+  mimeType: string;           // MIME 类型，如 image/png
+  config: S3Config;           // S3 配置
+}
+
+// 图片上传响应
+export interface ImageUploadResponse {
+  url: string;                // 图片访问 URL
+  key: string;                // 存储 key
+}
