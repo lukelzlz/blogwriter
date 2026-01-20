@@ -29,6 +29,19 @@ body {
   min-height: 100vh;
 }
 
+/* 强制表单元素使用浅色模式样式 */
+input,
+textarea,
+select {
+  background-color: #ffffff;
+  color: #1f2937;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af;
+}
+
 /* Markdown 编辑器样式 */
 .cm-editor {
   height: 100%;
