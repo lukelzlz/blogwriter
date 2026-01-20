@@ -321,8 +321,8 @@ export async function handlePosts(
 
   // GET /api/posts/:path - 获取单个文章
   if (path.startsWith('/api/posts/') && request.method === 'GET') {
-    // 不要对路径进行解码，因为 GitHub API 返回的路径可能已经是 URL 编码的
-    const postPath = path.substring('/api/posts/'.length);
+    // 对路径进行解码，因为 URL 中的路径已经被浏览器编码
+    const postPath = decodeURIComponent(path.substring('/api/posts/'.length));
 
     try {
       const post = await getPost(owner, repo, postPath, session.accessToken, branch);
@@ -368,8 +368,8 @@ export async function handlePosts(
 
   // PUT /api/posts/:path - 更新文章
   if (path.startsWith('/api/posts/') && request.method === 'PUT') {
-    // 不要对路径进行解码，因为 GitHub API 返回的路径可能已经是 URL 编码的
-    const postPath = path.substring('/api/posts/'.length);
+    // 对路径进行解码，因为 URL 中的路径已经被浏览器编码
+    const postPath = decodeURIComponent(path.substring('/api/posts/'.length));
 
     try {
       const params: UpdatePostParams = await request.json();
@@ -406,8 +406,8 @@ export async function handlePosts(
 
   // DELETE /api/posts/:path - 删除文章
   if (path.startsWith('/api/posts/') && request.method === 'DELETE') {
-    // 不要对路径进行解码，因为 GitHub API 返回的路径可能已经是 URL 编码的
-    const postPath = path.substring('/api/posts/'.length);
+    // 对路径进行解码，因为 URL 中的路径已经被浏览器编码
+    const postPath = decodeURIComponent(path.substring('/api/posts/'.length));
     const sha = url.searchParams.get('sha');
 
     console.log('[DEBUG] DELETE /api/posts/:path - postPath:', postPath);
