@@ -57,7 +57,7 @@ export async function getDirectoryContents(
   accessToken: string,
   branch?: string
 ): Promise<GitHubFile[]> {
-  const url = new URL(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${path}`);
+  const url = new URL(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`);
   if (branch) {
     url.searchParams.set('ref', branch);
   }
@@ -87,7 +87,7 @@ export async function getFileContent(
   accessToken: string,
   branch?: string
 ): Promise<{ content: string; sha: string }> {
-  const url = new URL(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${path}`);
+  const url = new URL(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`);
   if (branch) {
     url.searchParams.set('ref', branch);
   }
@@ -109,6 +109,7 @@ export async function getFileContent(
   const data: any = await response.json();
 
   // Base64 解码（使用 UTF-8 编码）
+  // 使用 escape/unescape 方法处理 Unicode 字符
   const content = decodeURIComponent(escape(atob(data.content)));
 
   return {
@@ -140,6 +141,7 @@ export async function createOrUpdateFile(
   });
 
   // 使用正确的方法编码包含 Unicode 字符的内容
+  // 使用 unescape/encodeURIComponent 方法处理 Unicode 字符
   const body: any = {
     message,
     content: btoa(unescape(encodeURIComponent(content))),

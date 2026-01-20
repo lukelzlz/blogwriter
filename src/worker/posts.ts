@@ -143,9 +143,9 @@ export async function createPost(
   const filePath = customPath ? `${customPath}/${filename}` : `_posts/${filename}`;
   
   // 生成 front-matter 和内容
-  const frontMatter = generateFrontMatter(title);
-  const fullContent = `${frontMatter}\n\n${userContent}`;
-  
+  const frontMatterStr = generateFrontMatter(title);
+  const fullContent = `${frontMatterStr}\n\n${userContent}`;
+
   // 提交到 GitHub
   const result = await createOrUpdateFile(
     owner,
@@ -157,7 +157,25 @@ export async function createPost(
     undefined,
     branch
   );
-  
+
+  // 解析 front-matter
+  const frontMatterRegex = /^---\n([\s\S]*?)\n---/;
+  const match = fullContent.match(frontMatterRegex);
+
+  let frontMatter = undefined;
+  if (match) {
+    const frontMatterText = match[1];
+    const titleMatch = frontMatterText.match(/^title:\s*(.+)$/m);
+    const dateMatch = frontMatterText.match(/^date:\s*(.+)$/m);
+
+    if (titleMatch && dateMatch) {
+      frontMatter = {
+        title: titleMatch[1].trim(),
+        date: dateMatch[1].trim(),
+      };
+    }
+  }
+
   return {
     path: filePath,
     name: filename,
@@ -165,6 +183,7 @@ export async function createPost(
     size: fullContent.length,
     url: result.content.html_url,
     content: fullContent,
+    frontMatter,
   };
 }
 
@@ -194,6 +213,24 @@ export async function updatePost(
 
   console.log('[DEBUG] updatePost result:', result);
 
+  // 解析 front-matter
+  const frontMatterRegex = /^---\n([\s\S]*?)\n---/;
+  const match = content.match(frontMatterRegex);
+
+  let frontMatter = undefined;
+  if (match) {
+    const frontMatterText = match[1];
+    const titleMatch = frontMatterText.match(/^title:\s*(.+)$/m);
+    const dateMatch = frontMatterText.match(/^date:\s*(.+)$/m);
+
+    if (titleMatch && dateMatch) {
+      frontMatter = {
+        title: titleMatch[1].trim(),
+        date: dateMatch[1].trim(),
+      };
+    }
+  }
+
   return {
     path,
     name: path.split('/').pop() || '',
@@ -201,6 +238,7 @@ export async function updatePost(
     size: content.length,
     url: result.content.html_url,
     content,
+    frontMatter,
   };
 }
 
@@ -306,7 +344,7 @@ export async function handlePosts(
     try {
       const params: CreatePostParams = await request.json();
       
-      if (!params.title || !params.content) {
+      if (!params.title?.trim() || !params.content) {
         return new Response(JSON.stringify({ error: 'Title and content are required' }), {
           status: 400,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -385,7 +423,7 @@ export async function handlePosts(
     try {
       await deletePost(owner, repo, postPath, sha, session.accessToken, branch);
 
-      return new Response(JSON.stringify({ success: true }), {
+      return new Response(JSON.stringify({ data: { success: true } }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     } catch (error) {

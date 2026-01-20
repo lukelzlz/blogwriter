@@ -1,5 +1,6 @@
 import { writable, derived, get } from 'svelte/store';
 import type { Post } from '$shared/types';
+import { formatDate } from '$lib/hexo';
 
 interface EditorState {
   currentPost: Post | null;
@@ -39,30 +40,33 @@ function createEditorStore() {
   }
 
   // 更新标题
-  function setTitle(title: string) {
+  function setTitle(title: string, markDirty: boolean = true) {
     update((state) => ({
       ...state,
       title,
-      isDirty: true,
+      isDirty: markDirty ? true : state.isDirty,
     }));
   }
 
   // 更新内容
-  function setContent(content: string) {
+  function setContent(content: string, markDirty: boolean = true) {
     update((state) => ({
       ...state,
       content,
-      isDirty: true,
+      isDirty: markDirty ? true : state.isDirty,
     }));
   }
 
   // 标记为已保存
-  function markAsSaved() {
+  function markAsSaved(newSha?: string) {
     update((state) => ({
       ...state,
       isDirty: false,
       isSaving: false,
       lastSavedAt: new Date(),
+      currentPost: newSha && state.currentPost
+        ? { ...state.currentPost, sha: newSha }
+        : state.currentPost,
     }));
   }
 
@@ -106,11 +110,18 @@ function createEditorStore() {
     const draftData = localStorage.getItem(draftKey);
     
     if (draftData) {
-      const draft = JSON.parse(draftData);
-      return {
-        title: draft.title,
-        content: draft.content,
-      };
+      try {
+        const draft = JSON.parse(draftData);
+        return {
+          title: draft.title,
+          content: draft.content,
+        };
+      } catch (error) {
+        console.error('Failed to parse draft data:', error);
+        // 清除损坏的草稿数据
+        localStorage.removeItem(draftKey);
+        return null;
+      }
     }
     
     return null;
@@ -135,8 +146,8 @@ function createEditorStore() {
       const { title, content, originalDate } = $state;
       if (!title) return content;
 
-      // 如果有原始日期，使用原始日期；否则使用当前时间
-      const dateStr = originalDate || new Date().toISOString().replace('T', ' ').substring(0, 19);
+      // 使用统一的日期格式化函数
+      const dateStr = originalDate || formatDate();
 
       return `---
 title: ${title}

@@ -2,29 +2,35 @@
 export function parseFrontMatter(content: string): { title?: string; date?: string; body: string } {
   const frontMatterRegex = /^---\n([\s\S]*?)\n---/;
   const match = content.match(frontMatterRegex);
-  
+
   if (!match) {
     return { body: content };
   }
-  
+
   const frontMatter = match[1];
   const result: { title?: string; date?: string; body: string } = {
     body: content.substring(match[0].length).trim(),
   };
-  
+
   const titleMatch = frontMatter.match(/^title:\s*(.+)$/m);
   if (titleMatch) result.title = titleMatch[1].trim();
-  
+
   const dateMatch = frontMatter.match(/^date:\s*(.+)$/m);
   if (dateMatch) result.date = dateMatch[1].trim();
-  
+
   return result;
+}
+
+// 统一的日期格式化函数
+export function formatDate(date?: Date | string): string {
+  const d = date ? new Date(date) : new Date();
+  return d.toISOString().replace('T', ' ').substring(0, 19);
 }
 
 // 生成 front-matter
 export function generateFrontMatter(title: string, date?: string): string {
-  const dateStr = date || new Date().toISOString().replace('T', ' ').substring(0, 19);
-  
+  const dateStr = date || formatDate();
+
   return `---
 title: ${title}
 date: ${dateStr}

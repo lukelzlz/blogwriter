@@ -38,21 +38,11 @@
 
     await loadPost();
 
-    // 设置自动保存（每30秒）
-    autoSaveInterval = setInterval(() => {
-      if ($editor.isDirty) {
-        editor.saveToLocal();
-      }
-    }, 30000);
-
     // 失去焦点时自动保存
     window.addEventListener('beforeunload', handleBeforeUnload);
   });
 
   onDestroy(() => {
-    if (autoSaveInterval) {
-      clearInterval(autoSaveInterval);
-    }
     window.removeEventListener('beforeunload', handleBeforeUnload);
   });
 
@@ -66,8 +56,7 @@
       console.log('[DEBUG] loadPost - response:', response);
 
       if (response.success && response.data) {
-        // API 返回的数据结构是 { data: post }，所以需要访问 response.data.data
-        const post = (response.data as any).data || response.data;
+        const post = response.data;
 
         // 添加日志：检查原始数据
         console.log('[DEBUG] 原始 post 数据:', post);
@@ -127,6 +116,11 @@
   }
 
   async function createPost() {
+    if (!$editor.title.trim()) {
+      alert('请输入文章标题');
+      return;
+    }
+
     editor.setSaving(true);
 
     try {
@@ -142,7 +136,9 @@
       );
 
       if (response.success && response.data) {
-        editor.markAsSaved();
+        const newPost = (response.data as any).data || response.data;
+        editor.markAsSaved(newPost.sha);
+        editor.setCurrentPost(newPost);
         editor.clearLocalDraft('new');
         alert('保存成功！');
         navigate('/');
@@ -159,6 +155,11 @@
 
   async function updatePost() {
     if (!$editor.currentPost) return;
+
+    if (!$editor.title.trim()) {
+      alert('请输入文章标题');
+      return;
+    }
 
     editor.setSaving(true);
 
@@ -198,7 +199,12 @@
       );
 
       if (response.success && response.data) {
-        editor.markAsSaved();
+        const updatedPost = (response.data as any).data || response.data;
+        editor.markAsSaved(updatedPost.sha);
+        editor.setCurrentPost({
+          ...$editor.currentPost,
+          ...updatedPost,
+        });
         editor.clearLocalDraft(slug);
         alert('保存成功！');
       } else {
@@ -215,8 +221,10 @@
   function restoreDraft() {
     const draft = editor.loadFromLocal(slug);
     if (draft) {
-      editor.setTitle(draft.title);
-      editor.setContent(draft.content);
+      // 清空 currentPost，因为草稿可能已经与服务器版本不同步
+      editor.setCurrentPost(null);
+      editor.setTitle(draft.title, false);
+      editor.setContent(draft.content, false);
     }
     showDraftModal = false;
   }
