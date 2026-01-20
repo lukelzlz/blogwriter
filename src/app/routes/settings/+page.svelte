@@ -4,15 +4,18 @@
 
   export let navigate: (path: string) => void = () => {};
   let owner = '';
-  let repo = '';
+  let repo = 'blog';
   let postsPath = '';
   let loading = false;
   let error = '';
   let success = '';
 
+  // 设置默认值：仓库所有者默认为用户ID，仓库名称默认为"blog"
   $: if ($auth.repo) {
     owner = $auth.repo.owner;
     repo = $auth.repo.name;
+  } else if ($auth.user?.login && !owner) {
+    owner = $auth.user.login;
   }
 
   $: if ($auth.postsPath) {
