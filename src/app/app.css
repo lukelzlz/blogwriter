@@ -7,12 +7,7 @@
   line-height: 1.6;
   font-weight: 400;
   
-  color-scheme: light dark;
-  /* 🔍 Debug: 原始设置导致白色文字 */
-  /* color: rgba(255, 255, 255, 0.87); */
-  /* background-color: #242424; */
-  
-  /* 🔧 修复：使用适合浅色主题的颜色 */
+  color-scheme: light;
   color: #1f2937; /* gray-900 */
   background-color: #f9fafb; /* gray-50 */
   
