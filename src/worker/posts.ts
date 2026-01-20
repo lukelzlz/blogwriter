@@ -31,29 +31,9 @@ export async function getPosts(
   console.log('[DEBUG] Markdown files count:', markdownFiles.length);
   console.log('[DEBUG] Markdown files:', markdownFiles.map(f => ({ name: f.name, path: f.path })));
 
-  // 去重：使用原始文件名（非URL编码）作为唯一标识
-  // GitHub API 可能返回重复的文件条目（URL编码版本和原始文件名版本）
-  const uniqueFilesMap = new Map<string, typeof markdownFiles[0]>();
-  
-  for (const file of markdownFiles) {
-    // 使用文件路径作为唯一标识
-    // 对路径进行解码以处理URL编码的文件名
-    const decodedPath = decodeURIComponent(file.path);
-    
-    // 如果已经存在该路径的文件，优先保留原始文件名版本（非URL编码）
-    const existingFile = uniqueFilesMap.get(decodedPath);
-    if (!existingFile || (!file.name.includes('%') && existingFile.name.includes('%'))) {
-      uniqueFilesMap.set(decodedPath, file);
-    }
-  }
-  
-  const uniqueMarkdownFiles = Array.from(uniqueFilesMap.values());
-  console.log('[DEBUG] After deduplication, Markdown files count:', uniqueMarkdownFiles.length);
-  console.log('[DEBUG] Unique Markdown files:', uniqueMarkdownFiles.map(f => ({ name: f.name, path: f.path, sha: f.sha })));
-
   // 获取每个文件的内容并解析 front-matter
   const postsWithFrontMatter = await Promise.all(
-    uniqueMarkdownFiles.map(async (file) => {
+    markdownFiles.map(async (file) => {
       try {
         const { content } = await getFileContent(owner, repo, file.path, accessToken, branch);
         
@@ -303,7 +283,8 @@ export async function handlePosts(
 
   // GET /api/posts/:path - 获取单个文章
   if (path.startsWith('/api/posts/') && request.method === 'GET') {
-    const postPath = decodeURIComponent(path.substring('/api/posts/'.length));
+    // 不要对路径进行解码，因为 GitHub API 返回的路径可能已经是 URL 编码的
+    const postPath = path.substring('/api/posts/'.length);
 
     try {
       const post = await getPost(owner, repo, postPath, session.accessToken, branch);
@@ -349,11 +330,13 @@ export async function handlePosts(
 
   // PUT /api/posts/:path - 更新文章
   if (path.startsWith('/api/posts/') && request.method === 'PUT') {
-    const postPath = decodeURIComponent(path.substring('/api/posts/'.length));
+    // 不要对路径进行解码，因为 GitHub API 返回的路径可能已经是 URL 编码的
+    const postPath = path.substring('/api/posts/'.length);
 
     try {
       const params: UpdatePostParams = await request.json();
 
+      console.log('[DEBUG] PUT /api/posts/:path - postPath:', postPath);
       console.log('[DEBUG] PUT /api/posts/:path - params:', params);
       console.log('[DEBUG] PUT /api/posts/:path - params.content:', params.content);
       console.log('[DEBUG] PUT /api/posts/:path - params.sha:', params.sha);
@@ -385,8 +368,12 @@ export async function handlePosts(
 
   // DELETE /api/posts/:path - 删除文章
   if (path.startsWith('/api/posts/') && request.method === 'DELETE') {
-    const postPath = decodeURIComponent(path.substring('/api/posts/'.length));
+    // 不要对路径进行解码，因为 GitHub API 返回的路径可能已经是 URL 编码的
+    const postPath = path.substring('/api/posts/'.length);
     const sha = url.searchParams.get('sha');
+
+    console.log('[DEBUG] DELETE /api/posts/:path - postPath:', postPath);
+    console.log('[DEBUG] DELETE /api/posts/:path - sha:', sha);
 
     if (!sha) {
       return new Response(JSON.stringify({ error: 'SHA is required' }), {
