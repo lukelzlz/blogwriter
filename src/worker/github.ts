@@ -217,7 +217,10 @@ export async function deleteFile(
     body.branch = branch;
   }
 
-  const response = await fetch(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${path}`, {
+  // 对文件名进行 URL 编码，与 createOrUpdateFile 保持一致
+  const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+
+  const response = await fetch(url, {
     method: 'DELETE',
     headers: {
       // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
@@ -231,8 +234,10 @@ export async function deleteFile(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Failed to delete file: ${error.message}`);
+    const errorText = await response.text();
+    console.error('[DEBUG] deleteFile error response:', errorText);
+    console.error('[DEBUG] deleteFile error status:', response.status);
+    throw new Error(`Failed to delete file: ${errorText}`);
   }
 
   return response.json();
