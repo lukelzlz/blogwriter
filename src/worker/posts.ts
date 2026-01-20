@@ -31,9 +31,29 @@ export async function getPosts(
   console.log('[DEBUG] Markdown files count:', markdownFiles.length);
   console.log('[DEBUG] Markdown files:', markdownFiles.map(f => ({ name: f.name, path: f.path })));
 
+  // 去重：使用原始文件名（非URL编码）作为唯一标识
+  // GitHub API 可能返回重复的文件条目（URL编码版本和原始文件名版本）
+  const uniqueFilesMap = new Map<string, typeof markdownFiles[0]>();
+  
+  for (const file of markdownFiles) {
+    // 使用文件路径作为唯一标识
+    // 对路径进行解码以处理URL编码的文件名
+    const decodedPath = decodeURIComponent(file.path);
+    
+    // 如果已经存在该路径的文件，优先保留原始文件名版本（非URL编码）
+    const existingFile = uniqueFilesMap.get(decodedPath);
+    if (!existingFile || (!file.name.includes('%') && existingFile.name.includes('%'))) {
+      uniqueFilesMap.set(decodedPath, file);
+    }
+  }
+  
+  const uniqueMarkdownFiles = Array.from(uniqueFilesMap.values());
+  console.log('[DEBUG] After deduplication, Markdown files count:', uniqueMarkdownFiles.length);
+  console.log('[DEBUG] Unique Markdown files:', uniqueMarkdownFiles.map(f => ({ name: f.name, path: f.path, sha: f.sha })));
+
   // 获取每个文件的内容并解析 front-matter
   const postsWithFrontMatter = await Promise.all(
-    markdownFiles.map(async (file) => {
+    uniqueMarkdownFiles.map(async (file) => {
       try {
         const { content } = await getFileContent(owner, repo, file.path, accessToken, branch);
         
