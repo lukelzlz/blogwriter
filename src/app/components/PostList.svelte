@@ -9,6 +9,25 @@
   export let onDelete: (post: Post) => void = () => {};
 
   let showDeleteConfirm: Post | null = null;
+
+  // 尝试解码文件名（处理 URL 编码的文件名）
+  function decodeFilename(filename: string): string {
+    try {
+      return decodeURIComponent(filename);
+    } catch {
+      return filename;
+    }
+  }
+
+  // 获取显示标题：优先使用 frontMatter.title，否则从文件名提取
+  function getDisplayTitle(post: Post): string {
+    if (post.frontMatter?.title) {
+      return post.frontMatter.title;
+    }
+    // 尝试解码文件名后再提取标题
+    const decodedName = decodeFilename(post.name);
+    return extractTitleFromFilename(decodedName);
+  }
 </script>
 
 <div class="post-list">
@@ -37,7 +56,7 @@
           <div class="flex items-start justify-between">
             <div class="flex-1 min-w-0">
               <h3 class="text-lg font-semibold text-gray-900 truncate">
-                {post.frontMatter?.title || extractTitleFromFilename(post.name)}
+                {getDisplayTitle(post)}
               </h3>
               <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                 <span class="flex items-center">
@@ -119,8 +138,7 @@
       <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
         <h3 class="text-lg font-semibold mb-4">确认删除</h3>
         <p class="text-gray-600 mb-6">
-          确定要删除文章 "{showDeleteConfirm.frontMatter?.title || extractTitleFromFilename(showDeleteConfirm.name)
-          }" 吗？此操作无法撤销。
+          确定要删除文章 "{getDisplayTitle(showDeleteConfirm)}" 吗？此操作无法撤销。
         </p>
         <div class="flex justify-end space-x-3">
           <button

@@ -4,6 +4,12 @@ import type { Post, CreatePostParams, UpdatePostParams, ApiResponse } from '$sha
 // API 基础 URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
+// 对路径进行 URL 编码，保留斜杠
+// 这样可以正确处理包含特殊字符（如 %）的文件名
+function encodePathForUrl(path: string): string {
+  return path.split('/').map(segment => encodeURIComponent(segment)).join('/');
+}
+
 // 获取认证头
 function getAuthHeaders(): HeadersInit {
   const sessionId = localStorage.getItem('sessionId');
@@ -93,7 +99,7 @@ export const postsApi = {
     if (owner) queryParams.set('owner', owner);
     if (repo) queryParams.set('repo', repo);
 
-    return request<Post>(`/api/posts/${path}?${queryParams.toString()}`);
+    return request<Post>(`/api/posts/${encodePathForUrl(path)}?${queryParams.toString()}`);
   },
 
   // 创建文章
@@ -118,7 +124,7 @@ export const postsApi = {
     if (owner) queryParams.set('owner', owner);
     if (repo) queryParams.set('repo', repo);
 
-    const url = `/api/posts/${path}?${queryParams.toString()}`;
+    const url = `/api/posts/${encodePathForUrl(path)}?${queryParams.toString()}`;
     console.log('[DEBUG] Request URL:', url);
     console.log('[DEBUG] Request body:', JSON.stringify(params));
 
@@ -135,7 +141,7 @@ export const postsApi = {
     if (owner) queryParams.set('owner', owner);
     if (repo) queryParams.set('repo', repo);
 
-    return request<{ success: boolean }>(`/api/posts/${path}?${queryParams.toString()}`, {
+    return request<{ success: boolean }>(`/api/posts/${encodePathForUrl(path)}?${queryParams.toString()}`, {
       method: 'DELETE',
     });
   },
