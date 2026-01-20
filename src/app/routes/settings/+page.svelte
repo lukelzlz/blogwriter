@@ -354,13 +354,23 @@
           Secret Access Key
         </label>
         <div class="relative">
-          <input
-            id="s3SecretAccessKey"
-            type={showSecretKey ? 'text' : 'password'}
-            bind:value={s3Config.secretAccessKey}
-            placeholder="输入 Secret Access Key"
-            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
-          />
+          {#if showSecretKey}
+            <input
+              id="s3SecretAccessKey"
+              type="text"
+              bind:value={s3Config.secretAccessKey}
+              placeholder="输入 Secret Access Key"
+              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
+            />
+          {:else}
+            <input
+              id="s3SecretAccessKey"
+              type="password"
+              bind:value={s3Config.secretAccessKey}
+              placeholder="输入 Secret Access Key"
+              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
+            />
+          {/if}
           <button
             type="button"
             on:click={() => showSecretKey = !showSecretKey}
