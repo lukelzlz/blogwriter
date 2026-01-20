@@ -86,8 +86,8 @@
   }
 
   function handleEdit(post: any) {
-    // 导航到编辑页面
-    navigate(`/edit/${encodeURIComponent(post.path)}`);
+    // 导航到编辑页面（不需要编码，路由会自动处理）
+    navigate(`/edit/${post.path}`);
   }
 
   async function handleDelete(post: any) {

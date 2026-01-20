@@ -20,7 +20,7 @@
     const path = window.location.pathname;
     const match = path.match(/\/edit\/(.+)/);
     if (match) {
-      slug = decodeURIComponent(match[1]);
+      slug = match[1];
     }
   }
 
