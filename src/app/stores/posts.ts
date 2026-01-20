@@ -23,7 +23,13 @@ function createPostsStore() {
   }
 
   function setPosts(posts: Post[]) {
-    update((state) => ({ ...state, posts, loading: false, error: null }));
+    // 对文件名进行解码，确保前端显示的是正确的文件名
+    const decodedPosts = posts.map((post) => ({
+      ...post,
+      name: post.name ? decodeURIComponent(post.name) : post.name,
+      path: post.path ? decodeURIComponent(post.path) : post.path,
+    }));
+    update((state) => ({ ...state, posts: decodedPosts, loading: false, error: null }));
   }
 
   function addPost(post: Post) {
