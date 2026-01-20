@@ -22,8 +22,10 @@ function generateState(): string {
 }
 
 // 解析 front-matter
+// 支持 Windows 换行符 \r\n 和 Unix 换行符 \n
 function parseFrontMatter(content: string): { title?: string; date?: string } {
-  const frontMatterRegex = /^---\n([\s\S]*?)\n---/;
+  // 支持 \r\n 和 \n 换行符
+  const frontMatterRegex = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
   const match = content.match(frontMatterRegex);
   
   if (!match) return {};
@@ -31,7 +33,8 @@ function parseFrontMatter(content: string): { title?: string; date?: string } {
   const frontMatter = match[1];
   const result: { title?: string; date?: string } = {};
   
-  const titleMatch = frontMatter.match(/^title:\s*(.+)$/m);
+  // 支持引号包裹的标题，如 title: "Hello: World" 或 title: 'Hello: World'
+  const titleMatch = frontMatter.match(/^title:\s*["']?(.+?)["']?\s*$/m);
   if (titleMatch) result.title = titleMatch[1].trim();
   
   const dateMatch = frontMatter.match(/^date:\s*(.+)$/m);
@@ -41,9 +44,14 @@ function parseFrontMatter(content: string): { title?: string; date?: string } {
 }
 
 // 生成 front-matter
+// 使用 UTC+8 时区（中国时区）生成日期
 function generateFrontMatter(title: string): string {
   const now = new Date();
-  const dateStr = now.toISOString().replace('T', ' ').substring(0, 19);
+  // 转换为 UTC+8 时区
+  const utc8Offset = 8 * 60 * 60 * 1000; // 8小时的毫秒数
+  const utc8Date = new Date(now.getTime() + utc8Offset);
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const dateStr = `${utc8Date.getUTCFullYear()}-${pad(utc8Date.getUTCMonth() + 1)}-${pad(utc8Date.getUTCDate())} ${pad(utc8Date.getUTCHours())}:${pad(utc8Date.getUTCMinutes())}:${pad(utc8Date.getUTCSeconds())}`;
   
   return `---
 title: ${title}

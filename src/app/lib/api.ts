@@ -37,9 +37,13 @@ async function request<T>(
       };
     }
 
+    // 自动解包后端返回的 { data: ... } 结构
+    // 后端统一返回 { data: T } 格式，这里解包为 T
+    const unwrappedData = data.data !== undefined ? data.data : data;
+
     return {
       success: true,
-      data,
+      data: unwrappedData,
     };
   } catch (error) {
     return {

@@ -5,36 +5,32 @@ export interface Post {
   sha: string;            // Git SHA
   size: number;           // 文件大小
   url: string;            // 文件 URL
-  content?: string;       // 文件内容（Base64）
+  content?: string;       // 文件内容（纯文本，已从 Base64 解码）
   frontMatter?: {
     title: string;
     date: string;
   };
 }
 
+// GitHub 用户信息
+export interface GitHubUser {
+  id: number;
+  login: string;
+  name?: string;          // 用户显示名称（可选）
+  avatar_url: string;
+  email?: string;
+}
+
 // 用户会话数据结构
 export interface UserSession {
   accessToken: string;
   refreshToken?: string;
-  user: {
-    id: number;
-    login: string;
-    avatar_url: string;
-  };
+  user: GitHubUser;       // 使用 GitHubUser 类型保持一致性
   repo?: {
     owner: string;
     name: string;
   };
   expiresAt: number;
-}
-
-// GitHub 用户信息
-export interface GitHubUser {
-  id: number;
-  login: string;
-  name: string;
-  avatar_url: string;
-  email?: string;
 }
 
 // GitHub 仓库信息

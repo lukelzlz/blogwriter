@@ -13,7 +13,6 @@
   let loading = true;
   let error = '';
   let showDraftModal = false;
-  let autoSaveInterval: ReturnType<typeof setInterval>;
 
   // 从 URL 获取文章路径
   $: if (typeof window !== 'undefined') {
@@ -56,8 +55,8 @@
       console.log('[DEBUG] loadPost - response:', response);
 
       if (response.success && response.data) {
-        // 处理后端返回的数据结构：{data: {...}}
-        const post = (response.data as any).data || response.data;
+        // API 层已自动解包，response.data 直接是文章对象
+        const post = response.data as any;
 
         // 添加日志：检查原始数据
         console.log('[DEBUG] 原始 post 数据:', post);
@@ -137,7 +136,8 @@
       );
 
       if (response.success && response.data) {
-        const newPost = (response.data as any).data || response.data;
+        // API 层已自动解包
+        const newPost = response.data as any;
         editor.markAsSaved(newPost.sha);
         editor.setCurrentPost(newPost);
         editor.clearLocalDraft('new');
@@ -200,7 +200,8 @@
       );
 
       if (response.success && response.data) {
-        const updatedPost = (response.data as any).data || response.data;
+        // API 层已自动解包
+        const updatedPost = response.data as any;
         editor.markAsSaved(updatedPost.sha);
         // 只更新 sha，不覆盖 title 和 content
         editor.setCurrentPost({

@@ -67,8 +67,8 @@
       console.log('[DEBUG] Response error:', response.error);
 
       if (response.success && response.data) {
-        // 处理后端返回的数据结构：{data: {data: Array}}
-        const postsData = Array.isArray(response.data) ? response.data : response.data.data;
+        // API 层已自动解包，response.data 直接是文章数组
+        const postsData = response.data as any[];
         console.log('[DEBUG] Posts loaded successfully, count:', postsData?.length);
         console.log('[DEBUG] Posts details:', postsData);
         posts.setPosts(postsData || []);
@@ -94,6 +94,7 @@
     if (!$auth.repo) return;
 
     try {
+      // 不需要编码路径，后端会统一处理编码
       const response = await postsApi.delete(
         post.path,
         post.sha,

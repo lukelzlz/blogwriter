@@ -23,13 +23,16 @@ function createPostsStore() {
   }
 
   function setPosts(posts: Post[]) {
-    // 对文件名进行解码，确保前端显示的是正确的文件名
-    const decodedPosts = posts.map((post) => ({
-      ...post,
-      name: post.name ? decodeURIComponent(post.name) : post.name,
-      path: post.path ? decodeURIComponent(post.path) : post.path,
-    }));
-    update((state) => ({ ...state, posts: decodedPosts, loading: false, error: null }));
+    // 使用 Map 去重，避免重复的文件
+    // 注意：后端返回的路径已经是解码后的，不需要再次解码
+    const uniquePosts = new Map<string, Post>();
+    for (const post of posts) {
+      // 使用路径作为唯一键
+      if (!uniquePosts.has(post.path)) {
+        uniquePosts.set(post.path, post);
+      }
+    }
+    update((state) => ({ ...state, posts: Array.from(uniquePosts.values()), loading: false, error: null }));
   }
 
   function addPost(post: Post) {

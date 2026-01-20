@@ -1,6 +1,8 @@
 // 解析 front-matter
+// 支持 Windows 换行符 \r\n 和 Unix 换行符 \n
 export function parseFrontMatter(content: string): { title?: string; date?: string; body: string } {
-  const frontMatterRegex = /^---\n([\s\S]*?)\n---/;
+  // 支持 \r\n 和 \n 换行符
+  const frontMatterRegex = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
   const match = content.match(frontMatterRegex);
 
   if (!match) {
@@ -12,7 +14,8 @@ export function parseFrontMatter(content: string): { title?: string; date?: stri
     body: content.substring(match[0].length).trim(),
   };
 
-  const titleMatch = frontMatter.match(/^title:\s*(.+)$/m);
+  // 支持引号包裹的标题，如 title: "Hello: World" 或 title: 'Hello: World'
+  const titleMatch = frontMatter.match(/^title:\s*["']?(.+?)["']?\s*$/m);
   if (titleMatch) result.title = titleMatch[1].trim();
 
   const dateMatch = frontMatter.match(/^date:\s*(.+)$/m);
@@ -21,10 +24,12 @@ export function parseFrontMatter(content: string): { title?: string; date?: stri
   return result;
 }
 
-// 统一的日期格式化函数
+// 统一的日期格式化函数（使用本地时间）
 export function formatDate(date?: Date | string): string {
   const d = date ? new Date(date) : new Date();
-  return d.toISOString().replace('T', ' ').substring(0, 19);
+  // 使用本地时间而不是 UTC 时间
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 // 生成 front-matter

@@ -37,14 +37,15 @@ export async function getPosts(
       try {
         const { content, sha } = await getFileContent(owner, repo, file.path, accessToken, branch);
         
-        // 解析 front-matter
-        const frontMatterRegex = /^---\n([\s\S]*?)\n---/;
+        // 解析 front-matter（支持 \r\n 和 \n 换行符）
+        const frontMatterRegex = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
         const match = content.match(frontMatterRegex);
         
         let frontMatter = undefined;
         if (match) {
           const frontMatterText = match[1];
-          const titleMatch = frontMatterText.match(/^title:\s*(.+)$/m);
+          // 支持引号包裹的标题
+          const titleMatch = frontMatterText.match(/^title:\s*["']?(.+?)["']?\s*$/m);
           const dateMatch = frontMatterText.match(/^date:\s*(.+)$/m);
           
           // 只有当 title 和 date 都存在时才设置 frontMatter
@@ -98,14 +99,15 @@ export async function getPost(
 ): Promise<Post> {
   const { content, sha } = await getFileContent(owner, repo, path, accessToken, branch);
   
-  // 解析 front-matter
-  const frontMatterRegex = /^---\n([\s\S]*?)\n---/;
+  // 解析 front-matter（支持 \r\n 和 \n 换行符）
+  const frontMatterRegex = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
   const match = content.match(frontMatterRegex);
   
   let frontMatter = undefined;
   if (match) {
     const frontMatterText = match[1];
-    const titleMatch = frontMatterText.match(/^title:\s*(.+)$/m);
+    // 支持引号包裹的标题
+    const titleMatch = frontMatterText.match(/^title:\s*["']?(.+?)["']?\s*$/m);
     const dateMatch = frontMatterText.match(/^date:\s*(.+)$/m);
     
     // 只有当 title 和 date 都存在时才设置 frontMatter
@@ -158,14 +160,15 @@ export async function createPost(
     branch
   );
 
-  // 解析 front-matter
-  const frontMatterRegex = /^---\n([\s\S]*?)\n---/;
+  // 解析 front-matter（支持 \r\n 和 \n 换行符）
+  const frontMatterRegex = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
   const match = fullContent.match(frontMatterRegex);
 
   let frontMatter = undefined;
   if (match) {
     const frontMatterText = match[1];
-    const titleMatch = frontMatterText.match(/^title:\s*(.+)$/m);
+    // 支持引号包裹的标题
+    const titleMatch = frontMatterText.match(/^title:\s*["']?(.+?)["']?\s*$/m);
     const dateMatch = frontMatterText.match(/^date:\s*(.+)$/m);
 
     if (titleMatch && dateMatch) {
@@ -213,14 +216,15 @@ export async function updatePost(
 
   console.log('[DEBUG] updatePost result:', result);
 
-  // 解析 front-matter
-  const frontMatterRegex = /^---\n([\s\S]*?)\n---/;
+  // 解析 front-matter（支持 \r\n 和 \n 换行符）
+  const frontMatterRegex = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
   const match = content.match(frontMatterRegex);
 
   let frontMatter = undefined;
   if (match) {
     const frontMatterText = match[1];
-    const titleMatch = frontMatterText.match(/^title:\s*(.+)$/m);
+    // 支持引号包裹的标题
+    const titleMatch = frontMatterText.match(/^title:\s*["']?(.+?)["']?\s*$/m);
     const dateMatch = frontMatterText.match(/^date:\s*(.+)$/m);
 
     if (titleMatch && dateMatch) {
