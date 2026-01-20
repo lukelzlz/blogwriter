@@ -283,11 +283,11 @@ export async function handlePosts(
 
   // GET /api/posts/:path - 获取单个文章
   if (path.startsWith('/api/posts/') && request.method === 'GET') {
-    const postPath = path.substring('/api/posts/'.length);
-    
+    const postPath = decodeURIComponent(path.substring('/api/posts/'.length));
+
     try {
       const post = await getPost(owner, repo, postPath, session.accessToken, branch);
-      
+
       return new Response(JSON.stringify({ data: post }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
@@ -329,7 +329,7 @@ export async function handlePosts(
 
   // PUT /api/posts/:path - 更新文章
   if (path.startsWith('/api/posts/') && request.method === 'PUT') {
-    const postPath = path.substring('/api/posts/'.length);
+    const postPath = decodeURIComponent(path.substring('/api/posts/'.length));
 
     try {
       const params: UpdatePostParams = await request.json();
@@ -365,19 +365,19 @@ export async function handlePosts(
 
   // DELETE /api/posts/:path - 删除文章
   if (path.startsWith('/api/posts/') && request.method === 'DELETE') {
-    const postPath = path.substring('/api/posts/'.length);
+    const postPath = decodeURIComponent(path.substring('/api/posts/'.length));
     const sha = url.searchParams.get('sha');
-    
+
     if (!sha) {
       return new Response(JSON.stringify({ error: 'SHA is required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
-    
+
     try {
       await deletePost(owner, repo, postPath, sha, session.accessToken, branch);
-      
+
       return new Response(JSON.stringify({ success: true }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
