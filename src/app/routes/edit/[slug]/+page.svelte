@@ -202,9 +202,10 @@
       if (response.success && response.data) {
         const updatedPost = (response.data as any).data || response.data;
         editor.markAsSaved(updatedPost.sha);
+        // 只更新 sha，不覆盖 title 和 content
         editor.setCurrentPost({
           ...$editor.currentPost,
-          ...updatedPost,
+          sha: updatedPost.sha,
         });
         editor.clearLocalDraft(slug);
         alert('保存成功！');
