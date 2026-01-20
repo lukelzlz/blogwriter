@@ -31,11 +31,12 @@ function createEditorStore() {
     update((state) => ({
       ...state,
       currentPost: post,
-      title: post?.frontMatter?.title || '',
-      content: '', // 初始化为空，后续会通过 setContent 设置为 body
+      // 只在 post 有 frontMatter 时才更新 title 和 originalDate
+      title: post?.frontMatter?.title !== undefined ? post.frontMatter.title : state.title,
+      // 不更新 content，保持编辑器中的内容不变
       isDirty: false,
       lastSavedAt: null,
-      originalDate: post?.frontMatter?.date || null,
+      originalDate: post?.frontMatter?.date !== undefined ? post.frontMatter.date : state.originalDate,
     }));
   }
 
