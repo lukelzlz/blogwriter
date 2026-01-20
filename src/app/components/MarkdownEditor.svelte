@@ -273,10 +273,12 @@
   });
 </script>
 
-<div 
+<div
   bind:this={wrapperContainer}
   class="editor-wrapper"
   class:dragging={isDragging}
+  role="region"
+  aria-label="Markdown 编辑器，支持拖拽上传图片"
   on:dragenter={handleDragEnter}
   on:dragover={handleDragOver}
   on:dragleave={handleDragLeave}
