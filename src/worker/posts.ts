@@ -35,7 +35,7 @@ export async function getPosts(
   const postsWithFrontMatter = await Promise.all(
     markdownFiles.map(async (file) => {
       try {
-        const { content } = await getFileContent(owner, repo, file.path, accessToken, branch);
+        const { content, sha } = await getFileContent(owner, repo, file.path, accessToken, branch);
         
         // 解析 front-matter
         const frontMatterRegex = /^---\n([\s\S]*?)\n---/;
@@ -59,7 +59,7 @@ export async function getPosts(
         return {
           path: file.path,
           name: file.name,
-          sha: file.sha,
+          sha, // 使用 getFileContent 返回的最新 SHA
           size: file.size,
           url: file.html_url,
           frontMatter,
