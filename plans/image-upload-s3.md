@@ -15,7 +15,8 @@
 
 ### 核心需求
 - 用户在设置页面配置 S3 信息
-- 在编辑器中粘贴图片时自动上传
+- 在编辑器中**粘贴图片**时自动上传（Ctrl+V）
+- 在编辑器中**拖拽图片**时自动上传
 - 上传成功后自动插入 Markdown 图片语法
 - 支持配置存储路径前缀（如 `blog/images/`）
 - 文件命名：时间戳 + 随机字符串
@@ -239,15 +240,18 @@ async function signRequest(
 **文件**: [`src/app/components/MarkdownEditor.svelte`](src/app/components/MarkdownEditor.svelte)
 
 新增功能：
-- 监听 paste 事件
-- 检测粘贴内容是否包含图片
-- 显示上传进度提示
+- 监听 paste 事件（粘贴上传）
+- 监听 drop/dragover 事件（拖拽上传）
+- 检测内容是否包含图片
+- 显示上传进度提示和拖拽区域高亮
 - 上传成功后在光标位置插入 Markdown 图片语法
 
 ```svelte
 <script lang="ts">
   // 新增 props
   export let onImageUpload: ((file: Blob) => Promise<string | null>) | undefined = undefined;
+
+  let isDragging = false;
 
   // 粘贴事件处理
   function handlePaste(event: ClipboardEvent) {
@@ -264,6 +268,60 @@ async function signRequest(
         break;
       }
     }
+  }
+
+  // 拖拽进入
+  function handleDragEnter(event: DragEvent) {
+    event.preventDefault();
+    if (hasImageFile(event)) {
+      isDragging = true;
+    }
+  }
+
+  // 拖拽悬停
+  function handleDragOver(event: DragEvent) {
+    event.preventDefault();
+    if (hasImageFile(event)) {
+      event.dataTransfer!.dropEffect = 'copy';
+    }
+  }
+
+  // 拖拽离开
+  function handleDragLeave(event: DragEvent) {
+    event.preventDefault();
+    isDragging = false;
+  }
+
+  // 放下文件
+  function handleDrop(event: DragEvent) {
+    event.preventDefault();
+    isDragging = false;
+    
+    if (!onImageUpload) return;
+    
+    const files = event.dataTransfer?.files;
+    if (files) {
+      for (const file of files) {
+        if (file.type.startsWith('image/')) {
+          uploadAndInsert(file);
+          break; // 只处理第一个图片
+        }
+      }
+    }
+  }
+
+  // 检查是否有图片文件
+  function hasImageFile(event: DragEvent): boolean {
+    const types = event.dataTransfer?.types;
+    const items = event.dataTransfer?.items;
+    if (types?.includes('Files') && items) {
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   // 上传并插入
@@ -283,6 +341,42 @@ async function signRequest(
     }
   }
 </script>
+
+<!-- 编辑器容器添加拖拽事件 -->
+<div
+  bind:this={editorContainer}
+  class="editor-container"
+  class:dragging={isDragging}
+  on:dragenter={handleDragEnter}
+  on:dragover={handleDragOver}
+  on:dragleave={handleDragLeave}
+  on:drop={handleDrop}
+>
+</div>
+
+<style>
+  /* 拖拽状态样式 */
+  .editor-container.dragging {
+    border: 2px dashed #3b82f6;
+    background-color: rgba(59, 130, 246, 0.05);
+    position: relative;
+  }
+  
+  .editor-container.dragging::after {
+    content: '释放以上传图片';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.25rem;
+    color: #3b82f6;
+    pointer-events: none;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 1rem 2rem;
+    border-radius: 0.5rem;
+  }
+</style>
 ```
 
 ## 文件变更清单
