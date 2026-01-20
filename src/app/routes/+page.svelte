@@ -86,8 +86,9 @@
   }
 
   function handleEdit(post: any) {
-    // 导航到编辑页面（不需要编码，路由会自动处理）
-    navigate(`/edit/${post.path}`);
+    // 导航到编辑页面
+    // 对路径进行编码，确保包含特殊字符（如 %）的文件名能正确传递
+    navigate(`/edit/${encodeURIComponent(post.path)}`);
   }
 
   async function handleDelete(post: any) {

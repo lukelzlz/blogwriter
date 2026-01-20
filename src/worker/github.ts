@@ -92,10 +92,15 @@ export async function getFileContent(
   accessToken: string,
   branch?: string
 ): Promise<{ content: string; sha: string }> {
-  const url = new URL(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodePathForGitHub(path)}`);
+  const encodedPath = encodePathForGitHub(path);
+  const url = new URL(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodedPath}`);
   if (branch) {
     url.searchParams.set('ref', branch);
   }
+
+  console.log('[DEBUG] getFileContent - original path:', path);
+  console.log('[DEBUG] getFileContent - encoded path:', encodedPath);
+  console.log('[DEBUG] getFileContent - full URL:', url.toString());
 
   const response = await fetch(url.toString(), {
     headers: {
@@ -108,6 +113,9 @@ export async function getFileContent(
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[DEBUG] getFileContent error response:', errorText);
+    console.error('[DEBUG] getFileContent error status:', response.status);
     throw new Error('Failed to fetch file content');
   }
 

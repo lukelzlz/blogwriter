@@ -19,7 +19,8 @@
     const path = window.location.pathname;
     const match = path.match(/\/edit\/(.+)/);
     if (match) {
-      slug = match[1];
+      // 解码 URL 编码的路径
+      slug = decodeURIComponent(match[1]);
     }
   }
 
