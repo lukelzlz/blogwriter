@@ -56,7 +56,8 @@
       console.log('[DEBUG] loadPost - response:', response);
 
       if (response.success && response.data) {
-        const post = response.data;
+        // 处理后端返回的数据结构：{data: {...}}
+        const post = (response.data as any).data || response.data;
 
         // 添加日志：检查原始数据
         console.log('[DEBUG] 原始 post 数据:', post);
