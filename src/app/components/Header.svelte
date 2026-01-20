@@ -2,12 +2,19 @@
   import { auth } from '$stores/auth';
   import { authApi } from '$lib/api';
 
-  let showMenu = false;
+  let showUserMenu = false;
+  let showMobileMenu = false;
 
   async function handleLogout() {
     await authApi.logout();
     auth.clearSession();
-    showMenu = false;
+    showUserMenu = false;
+    showMobileMenu = false;
+  }
+
+  function closeAllMenus() {
+    showUserMenu = false;
+    showMobileMenu = false;
   }
 </script>
 
@@ -38,9 +45,9 @@
       <!-- User Menu -->
       <div class="flex items-center space-x-4">
         {#if $auth.isAuthenticated}
-          <div class="relative">
+          <div class="relative hidden md:block">
             <button
-              on:click={() => (showMenu = !showMenu)}
+              on:click={() => (showUserMenu = !showUserMenu)}
               class="flex items-center space-x-2 focus:outline-none"
             >
               <img
@@ -50,7 +57,7 @@
               />
               <span class="hidden md:inline">{$auth.user?.login}</span>
               <svg
-                class="w-4 h-4 transition-transform {showMenu ? 'rotate-180' : ''}"
+                class="w-4 h-4 transition-transform {showUserMenu ? 'rotate-180' : ''}"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -65,12 +72,12 @@
             </button>
 
             <!-- Dropdown Menu -->
-            {#if showMenu}
+            {#if showUserMenu}
               <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                 <a
                   href="/settings"
                   class="block px-4 py-2 text-gray-700 hover:bg-gray-100"
-                  on:click={() => (showMenu = false)}
+                  on:click={() => (showUserMenu = false)}
                 >
                   设置
                 </a>
@@ -96,38 +103,47 @@
       <!-- Mobile Menu Button -->
       <button
         class="md:hidden"
-        on:click={() => (showMenu = !showMenu)}
+        on:click={() => (showMobileMenu = !showMobileMenu)}
         aria-label="Toggle menu"
       >
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M4 6h16M4 12h16M4 18h16"
-          />
+          {#if showMobileMenu}
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          {:else}
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          {/if}
         </svg>
       </button>
     </div>
 
     <!-- Mobile Navigation -->
-    {#if showMenu}
+    {#if showMobileMenu}
       <nav class="md:hidden mt-4 pb-4 border-t border-gray-700 pt-4">
-        <a href="/" class="block py-2 hover:text-gray-300" on:click={() => (showMenu = false)}
+        <a href="/" class="block py-2 hover:text-gray-300" on:click={() => (showMobileMenu = false)}
           >文章列表</a
         >
         {#if $auth.isAuthenticated}
           <a
             href="/new"
             class="block py-2 hover:text-gray-300"
-            on:click={() => (showMenu = false)}
+            on:click={() => (showMobileMenu = false)}
           >
             新建文章
           </a>
           <a
             href="/settings"
             class="block py-2 hover:text-gray-300"
-            on:click={() => (showMenu = false)}
+            on:click={() => (showMobileMenu = false)}
           >
             设置
           </a>
@@ -141,7 +157,7 @@
           <a
             href="/login"
             class="block py-2 text-blue-400 hover:text-blue-300"
-            on:click={() => (showMenu = false)}
+            on:click={() => (showMobileMenu = false)}
           >
             登录
           </a>
