@@ -671,7 +671,7 @@
 
 <!-- 移动端快捷键栏 -->
 {#if isMobile && showShortcutBar}
-  <div class="shortcut-bar" style="bottom: {keyboardHeight}px; transform: translateY({-viewportOffsetTop}px);">
+  <div class="shortcut-bar" style="bottom: {keyboardHeight}px; transform: translateY({viewportOffsetTop}px);">
     <div class="shortcut-bar-inner">
       <!-- 粘贴按钮 -->
       <button
