@@ -144,6 +144,108 @@
     }
   }
 
+  // 配置导入导出
+  let importExportError = '';
+  let importExportSuccess = '';
+  let importConfigText = '';
+  let showImportModal = false;
+
+  interface ExportConfig {
+    version: number;
+    repo: { owner: string; name: string } | null;
+    postsPath: string;
+    s3Config: S3Config | null;
+  }
+
+  function handleExportConfig() {
+    importExportError = '';
+    importExportSuccess = '';
+
+    try {
+      const config: ExportConfig = {
+        version: 1,
+        repo: $auth.repo,
+        postsPath: $auth.postsPath,
+        s3Config: $auth.s3Config,
+      };
+
+      const jsonStr = JSON.stringify(config);
+      const base64Str = btoa(unescape(encodeURIComponent(jsonStr)));
+
+      // 复制到剪贴板
+      navigator.clipboard.writeText(base64Str).then(() => {
+        importExportSuccess = '配置已导出并复制到剪贴板';
+        setTimeout(() => (importExportSuccess = ''), 3000);
+      }).catch(() => {
+        // 如果剪贴板不可用，显示配置字符串
+        prompt('请复制以下配置字符串：', base64Str);
+      });
+    } catch (err) {
+      importExportError = '导出配置失败';
+      console.error('Export config error:', err);
+    }
+  }
+
+  function handleOpenImportModal() {
+    importConfigText = '';
+    importExportError = '';
+    importExportSuccess = '';
+    showImportModal = true;
+  }
+
+  function handleCloseImportModal() {
+    showImportModal = false;
+    importConfigText = '';
+  }
+
+  async function handleImportConfig() {
+    importExportError = '';
+    importExportSuccess = '';
+
+    if (!importConfigText.trim()) {
+      importExportError = '请输入配置字符串';
+      return;
+    }
+
+    try {
+      const jsonStr = decodeURIComponent(escape(atob(importConfigText.trim())));
+      const config: ExportConfig = JSON.parse(jsonStr);
+
+      // 验证配置版本
+      if (!config.version || config.version !== 1) {
+        importExportError = '配置格式不正确或版本不兼容';
+        return;
+      }
+
+      // 导入仓库配置
+      if (config.repo) {
+        auth.setRepo(config.repo.owner, config.repo.name);
+        owner = config.repo.owner;
+        repo = config.repo.name;
+      }
+
+      // 导入文章路径
+      if (config.postsPath) {
+        auth.setPostsPath(config.postsPath);
+        postsPath = config.postsPath;
+      }
+
+      // 导入 S3 配置
+      if (config.s3Config) {
+        auth.setS3Config(config.s3Config);
+        s3Config = { ...config.s3Config };
+      }
+
+      showImportModal = false;
+      importConfigText = '';
+      importExportSuccess = '配置导入成功';
+      setTimeout(() => (importExportSuccess = ''), 3000);
+    } catch (err) {
+      importExportError = '配置解析失败，请检查配置字符串是否正确';
+      console.error('Import config error:', err);
+    }
+  }
+
 </script>
 
 <div class="max-w-2xl mx-auto space-y-6">
@@ -526,6 +628,98 @@
       <p class="text-gray-500 text-sm">尚未配置仓库</p>
     {/if}
   </div>
+
+  <!-- 配置导入导出 -->
+  <div class="bg-white rounded-lg shadow-sm p-6">
+    <h2 class="text-xl font-semibold mb-4">配置导入导出</h2>
+    <p class="text-gray-600 mb-6">
+      一键导入或导出所有配置（仓库信息和图床配置），方便在不同设备间同步
+    </p>
+
+    {#if importExportError}
+      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        {importExportError}
+      </div>
+    {/if}
+
+    {#if importExportSuccess}
+      <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+        {importExportSuccess}
+      </div>
+    {/if}
+
+    <div class="flex gap-4">
+      <button
+        on:click={handleExportConfig}
+        class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition flex items-center justify-center gap-2"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+        导出配置
+      </button>
+      <button
+        on:click={handleOpenImportModal}
+        class="flex-1 border border-primary-600 text-primary-600 hover:bg-primary-50 font-medium py-2 px-4 rounded-md transition flex items-center justify-center gap-2"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+        </svg>
+        导入配置
+      </button>
+    </div>
+
+    <p class="text-sm text-gray-500 mt-4">
+      配置使用 Base64 编码，不包含加密。请妥善保管导出的配置字符串，其中包含敏感信息。
+    </p>
+  </div>
+
+  <!-- 导入配置弹窗 -->
+  {#if showImportModal}
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+        <h3 class="text-lg font-semibold mb-4">导入配置</h3>
+        
+        {#if importExportError}
+          <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+            {importExportError}
+          </div>
+        {/if}
+
+        <div class="mb-4">
+          <label for="importConfig" class="block text-sm font-medium text-gray-700 mb-2">
+            配置字符串
+          </label>
+          <textarea
+            id="importConfig"
+            bind:value={importConfigText}
+            placeholder="粘贴导出的配置字符串..."
+            rows="4"
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+          ></textarea>
+        </div>
+
+        <div class="flex gap-3">
+          <button
+            on:click={handleImportConfig}
+            class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition"
+          >
+            确认导入
+          </button>
+          <button
+            on:click={handleCloseImportModal}
+            class="flex-1 border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2 px-4 rounded-md transition"
+          >
+            取消
+          </button>
+        </div>
+
+        <p class="text-xs text-gray-500 mt-4">
+          导入将覆盖当前的仓库配置和图床配置
+        </p>
+      </div>
+    </div>
+  {/if}
 
   <!-- 帮助信息 -->
   <div class="bg-primary-50 border border-primary-200 rounded-lg p-6">
