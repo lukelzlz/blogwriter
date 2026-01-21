@@ -4,6 +4,9 @@ import type { Post, CreatePostParams, UpdatePostParams, ApiResponse, ImageUpload
 // API 基础 URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
+// 是否正在进行重新认证
+let isReauthenticating = false;
+
 // 对路径进行 URL 编码，保留斜杠
 // 这样可以正确处理包含特殊字符（如 %）的文件名
 function encodePathForUrl(path: string): string {
@@ -17,6 +20,47 @@ function getAuthHeaders(): HeadersInit {
     'Content-Type': 'application/json',
     'Authorization': sessionId ? `Bearer ${sessionId}` : '',
   };
+}
+
+// 处理会话过期，自动重新获取
+async function handleSessionExpired(): Promise<void> {
+  // 防止重复触发重新认证
+  if (isReauthenticating) {
+    return;
+  }
+  
+  isReauthenticating = true;
+  console.log('🔄 [Session] 会话已过期，正在清除本地会话并重新认证...');
+  
+  try {
+    // 清除本地会话
+    auth.clearSession();
+    
+    // 获取 GitHub OAuth URL 并重定向
+    const response = await fetch(`${API_BASE_URL}/auth/github`, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const authUrl = data.url || data.data?.url;
+      if (authUrl) {
+        console.log('🔄 [Session] 重定向到 GitHub 进行重新认证...');
+        window.location.href = authUrl;
+        return;
+      }
+    }
+    
+    // 如果获取 OAuth URL 失败，重定向到登录页面
+    console.log('🔄 [Session] 无法获取 OAuth URL，重定向到登录页面...');
+    window.location.href = '/login';
+  } catch (error) {
+    console.error('❌ [Session] 重新认证失败:', error);
+    // 重定向到登录页面
+    window.location.href = '/login';
+  } finally {
+    isReauthenticating = false;
+  }
 }
 
 // 通用请求函数
@@ -37,6 +81,15 @@ async function request<T>(
     const data = await response.json();
 
     if (!response.ok) {
+      // 检测会话过期错误（401 状态码且错误信息包含 session 相关内容）
+      if (response.status === 401 &&
+          (data.error === 'Invalid or expired session' ||
+           data.error === 'No session provided' ||
+           data.error?.toLowerCase().includes('session'))) {
+        // 异步处理会话过期，不阻塞当前请求返回
+        handleSessionExpired();
+      }
+      
       return {
         success: false,
         error: data.error || 'Request failed',
@@ -187,6 +240,13 @@ export const imageApi = {
             const unwrappedData = data.data !== undefined ? data.data : data;
             resolve({ success: true, data: unwrappedData });
           } else {
+            // 检测会话过期错误
+            if (xhr.status === 401 &&
+                (data.error === 'Invalid or expired session' ||
+                 data.error === 'No session provided' ||
+                 data.error?.toLowerCase().includes('session'))) {
+              handleSessionExpired();
+            }
             resolve({ success: false, error: data.error || 'Upload failed' });
           }
         } catch {
