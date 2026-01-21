@@ -37,6 +37,7 @@
   let isMobile = false;
   let showShortcutBar = false;
   let keyboardHeight = 0;
+  let viewportOffsetTop = 0;
   
   // 触摸滑动检测
   let touchStartX = 0;
@@ -109,6 +110,7 @@
       // 监听 visualViewport 变化来检测键盘弹出
       if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', handleViewportResize);
+        window.visualViewport.addEventListener('scroll', handleViewportScroll);
       }
     }
 
@@ -122,6 +124,7 @@
       }
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', handleViewportResize);
+        window.visualViewport.removeEventListener('scroll', handleViewportScroll);
       }
     };
   });
@@ -149,6 +152,7 @@
       const viewportHeight = window.visualViewport.height;
       const windowHeight = window.innerHeight;
       keyboardHeight = windowHeight - viewportHeight;
+      viewportOffsetTop = window.visualViewport.offsetTop;
       
       // 如果键盘高度大于100，认为键盘已弹出
       if (keyboardHeight > 100 && editor?.isFocused()) {
@@ -156,6 +160,13 @@
       } else if (keyboardHeight < 100) {
         showShortcutBar = false;
       }
+    }
+  }
+  
+  // 处理视口滚动（iOS 上滑动页面时 visualViewport 会滚动）
+  function handleViewportScroll() {
+    if (window.visualViewport) {
+      viewportOffsetTop = window.visualViewport.offsetTop;
     }
   }
   
@@ -660,7 +671,7 @@
 
 <!-- 移动端快捷键栏 -->
 {#if isMobile && showShortcutBar}
-  <div class="shortcut-bar" style="bottom: {keyboardHeight}px;">
+  <div class="shortcut-bar" style="bottom: {keyboardHeight}px; transform: translateY({-viewportOffsetTop}px);">
     <div class="shortcut-bar-inner">
       <!-- 粘贴按钮 -->
       <button
