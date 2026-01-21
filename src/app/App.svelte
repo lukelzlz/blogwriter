@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { auth } from '$stores/auth';
   import { authApi } from '$lib/api';
+  import { updateAvailable, applyUpdate, checkForUpdates } from '$lib/pwa';
   import Header from '$components/Header.svelte';
   import HomePage from '$routes/+page.svelte';
   import LoginPage from '$routes/login/+page.svelte';
@@ -81,6 +82,37 @@
 </script>
 
 <div class="min-h-screen bg-gray-50">
+  <!-- PWA 更新提示 -->
+  {#if $updateAvailable}
+    <div class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-blue-600 text-white rounded-lg shadow-lg p-4 z-50 animate-slide-up">
+      <div class="flex items-start gap-3">
+        <div class="flex-shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </div>
+        <div class="flex-1">
+          <h3 class="font-semibold">发现新版本</h3>
+          <p class="text-sm text-blue-100 mt-1">应用有更新可用，点击刷新获取最新功能。</p>
+        </div>
+      </div>
+      <div class="flex gap-2 mt-3">
+        <button
+          on:click={applyUpdate}
+          class="flex-1 bg-white text-blue-600 font-medium py-2 px-4 rounded-md hover:bg-blue-50 transition"
+        >
+          立即更新
+        </button>
+        <button
+          on:click={() => updateAvailable.set(false)}
+          class="px-4 py-2 text-blue-100 hover:text-white transition"
+        >
+          稍后
+        </button>
+      </div>
+    </div>
+  {/if}
+
   <Header />
 
   <main class="container mx-auto px-4 py-8">
