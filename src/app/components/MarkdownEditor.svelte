@@ -102,7 +102,7 @@
   }
 
   // 移动端 Paste 按钮点击处理
-  async function handleMobilePasteClick(event: MouseEvent) {
+  function handleMobilePasteClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
     // 检查是否点击了 Ace Editor 的移动端 Paste 按钮
     if (!target.classList.contains('ace_mobile-button') || target.getAttribute('action') !== 'paste') {
@@ -111,6 +111,18 @@
     
     if (!onImageUpload) return;
     
+    // 立即阻止默认行为，防止 Ace Editor 执行粘贴命令
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // 异步处理剪贴板
+    handleMobilePasteAsync();
+  }
+  
+  // 异步处理移动端粘贴
+  async function handleMobilePasteAsync() {
+    if (!onImageUpload || !editor) return;
+    
     // 使用 Clipboard API 读取剪贴板
     try {
       const clipboardItems = await navigator.clipboard.read();
@@ -118,16 +130,27 @@
         // 查找图片类型
         const imageType = item.types.find(type => type.startsWith('image/'));
         if (imageType) {
-          event.preventDefault();
-          event.stopPropagation();
           const blob = await item.getType(imageType);
           uploadAndInsert(blob);
           return;
         }
       }
+      // 没有图片，尝试读取文本并插入
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        editor.insert(text);
+      }
     } catch (error) {
-      // Clipboard API 可能因权限问题失败，静默处理
-      console.log('[MarkdownEditor] Clipboard API not available or permission denied:', error);
+      // Clipboard API 可能因权限问题失败，尝试读取文本
+      console.log('[MarkdownEditor] Clipboard read failed, trying readText:', error);
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          editor.insert(text);
+        }
+      } catch (textError) {
+        console.log('[MarkdownEditor] Clipboard readText also failed:', textError);
+      }
     }
   }
 
