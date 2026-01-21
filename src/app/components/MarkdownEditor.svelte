@@ -37,6 +37,12 @@
   let isMobile = false;
   let showShortcutBar = false;
   let keyboardHeight = 0;
+  
+  // 触摸滑动检测
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let isTouchMoving = false;
+  const TOUCH_THRESHOLD = 10; // 移动超过10px认为是滑动
 
   onMount(() => {
     console.log('[MarkdownEditor] onMount called');
@@ -151,6 +157,36 @@
         showShortcutBar = false;
       }
     }
+  }
+  
+  // 触摸开始 - 记录起始位置
+  function handleTouchStart(event: TouchEvent) {
+    const touch = event.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    isTouchMoving = false;
+  }
+  
+  // 触摸移动 - 检测是否是滑动
+  function handleTouchMove(event: TouchEvent) {
+    const touch = event.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchStartX);
+    const deltaY = Math.abs(touch.clientY - touchStartY);
+    
+    if (deltaX > TOUCH_THRESHOLD || deltaY > TOUCH_THRESHOLD) {
+      isTouchMoving = true;
+    }
+  }
+  
+  // 触摸结束 - 只有非滑动才触发操作
+  function handleTouchEnd(callback: () => void) {
+    return (event: TouchEvent) => {
+      if (!isTouchMoving) {
+        event.preventDefault();
+        callback();
+      }
+      isTouchMoving = false;
+    };
   }
   
   // 快捷键栏：插入文本
@@ -631,7 +667,9 @@
         class="shortcut-btn shortcut-btn-paste"
         on:click={handleShortcutPaste}
         on:mousedown|preventDefault
-        on:touchstart|preventDefault={handleShortcutPaste}
+        on:touchstart={handleTouchStart}
+        on:touchmove={handleTouchMove}
+        on:touchend={handleTouchEnd(handleShortcutPaste)}
         aria-label="粘贴"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -646,77 +684,99 @@
       <button
         class="shortcut-btn"
         on:mousedown|preventDefault={() => insertShortcut('# ')}
-        on:touchstart|preventDefault={() => insertShortcut('# ')}
+        on:touchstart={handleTouchStart}
+        on:touchmove={handleTouchMove}
+        on:touchend={handleTouchEnd(() => insertShortcut('# '))}
         aria-label="标题"
       >#</button>
       
       <button
         class="shortcut-btn"
         on:mousedown|preventDefault={() => insertShortcut('**', -2)}
-        on:touchstart|preventDefault={() => insertShortcut('**', -2)}
+        on:touchstart={handleTouchStart}
+        on:touchmove={handleTouchMove}
+        on:touchend={handleTouchEnd(() => insertShortcut('**', -2))}
         aria-label="粗体"
       >**</button>
       
       <button
         class="shortcut-btn"
         on:mousedown|preventDefault={() => insertShortcut('*', -1)}
-        on:touchstart|preventDefault={() => insertShortcut('*', -1)}
+        on:touchstart={handleTouchStart}
+        on:touchmove={handleTouchMove}
+        on:touchend={handleTouchEnd(() => insertShortcut('*', -1))}
         aria-label="斜体"
       >*</button>
       
       <button
         class="shortcut-btn"
         on:mousedown|preventDefault={() => insertShortcut('`', -1)}
-        on:touchstart|preventDefault={() => insertShortcut('`', -1)}
+        on:touchstart={handleTouchStart}
+        on:touchmove={handleTouchMove}
+        on:touchend={handleTouchEnd(() => insertShortcut('`', -1))}
         aria-label="行内代码"
       >`</button>
       
       <button
         class="shortcut-btn"
         on:mousedown|preventDefault={() => insertShortcut('```\n\n```', -4)}
-        on:touchstart|preventDefault={() => insertShortcut('```\n\n```', -4)}
+        on:touchstart={handleTouchStart}
+        on:touchmove={handleTouchMove}
+        on:touchend={handleTouchEnd(() => insertShortcut('```\n\n```', -4))}
         aria-label="代码块"
       >```</button>
       
       <button
         class="shortcut-btn"
         on:mousedown|preventDefault={() => insertShortcut('[]()', -3)}
-        on:touchstart|preventDefault={() => insertShortcut('[]()', -3)}
+        on:touchstart={handleTouchStart}
+        on:touchmove={handleTouchMove}
+        on:touchend={handleTouchEnd(() => insertShortcut('[]()', -3))}
         aria-label="链接"
       >[]()</button>
       
       <button
         class="shortcut-btn"
         on:mousedown|preventDefault={() => insertShortcut('![]()', -3)}
-        on:touchstart|preventDefault={() => insertShortcut('![]()', -3)}
+        on:touchstart={handleTouchStart}
+        on:touchmove={handleTouchMove}
+        on:touchend={handleTouchEnd(() => insertShortcut('![]()', -3))}
         aria-label="图片"
       >![]()</button>
       
       <button
         class="shortcut-btn"
         on:mousedown|preventDefault={() => insertShortcut('- ')}
-        on:touchstart|preventDefault={() => insertShortcut('- ')}
+        on:touchstart={handleTouchStart}
+        on:touchmove={handleTouchMove}
+        on:touchend={handleTouchEnd(() => insertShortcut('- '))}
         aria-label="列表"
       >-</button>
       
       <button
         class="shortcut-btn"
         on:mousedown|preventDefault={() => insertShortcut('> ')}
-        on:touchstart|preventDefault={() => insertShortcut('> ')}
+        on:touchstart={handleTouchStart}
+        on:touchmove={handleTouchMove}
+        on:touchend={handleTouchEnd(() => insertShortcut('> '))}
         aria-label="引用"
       >></button>
       
       <button
         class="shortcut-btn"
         on:mousedown|preventDefault={() => insertShortcut('~~', -2)}
-        on:touchstart|preventDefault={() => insertShortcut('~~', -2)}
+        on:touchstart={handleTouchStart}
+        on:touchmove={handleTouchMove}
+        on:touchend={handleTouchEnd(() => insertShortcut('~~', -2))}
         aria-label="删除线"
       >~~</button>
       
       <button
         class="shortcut-btn"
         on:mousedown|preventDefault={() => insertShortcut('---\n')}
-        on:touchstart|preventDefault={() => insertShortcut('---\n')}
+        on:touchstart={handleTouchStart}
+        on:touchmove={handleTouchMove}
+        on:touchend={handleTouchEnd(() => insertShortcut('---\n'))}
         aria-label="分割线"
       >---</button>
     </div>
@@ -939,9 +999,9 @@
     /* 添加滚动提示渐变 */
     mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 24px), transparent);
     -webkit-mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 24px), transparent);
-    /* 确保触摸滚动流畅 */
+    /* 确保触摸滚动流畅 - 允许水平和垂直滑动穿透 */
     scroll-behavior: smooth;
-    touch-action: pan-x;
+    touch-action: pan-x pan-y;
   }
 
   :global(.shortcut-bar-inner::-webkit-scrollbar) {
