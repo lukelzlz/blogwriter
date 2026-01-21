@@ -929,12 +929,19 @@
   :global(.shortcut-bar-inner) {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 4px;
     padding: 8px 12px;
     overflow-x: auto;
+    overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    /* 添加滚动提示渐变 */
+    mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 24px), transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 24px), transparent);
+    /* 确保触摸滚动流畅 */
+    scroll-behavior: smooth;
+    touch-action: pan-x;
   }
 
   :global(.shortcut-bar-inner::-webkit-scrollbar) {
