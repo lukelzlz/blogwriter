@@ -68,12 +68,16 @@
 
     // 监听粘贴事件
     editor.container.addEventListener('paste', handlePaste);
+    
+    // 监听移动端 Paste 按钮点击（Ace Editor 移动端会显示 Paste 按钮）
+    editor.container.addEventListener('click', handleMobilePasteClick);
 
     console.log('[MarkdownEditor] Setup complete');
 
     return () => {
       if (editor) {
         editor.container.removeEventListener('paste', handlePaste);
+        editor.container.removeEventListener('click', handleMobilePasteClick);
         editor.destroy();
       }
     };
@@ -94,6 +98,36 @@
         }
         break;
       }
+    }
+  }
+
+  // 移动端 Paste 按钮点击处理
+  async function handleMobilePasteClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    // 检查是否点击了 Ace Editor 的移动端 Paste 按钮
+    if (!target.classList.contains('ace_mobile-button') || target.getAttribute('action') !== 'paste') {
+      return;
+    }
+    
+    if (!onImageUpload) return;
+    
+    // 使用 Clipboard API 读取剪贴板
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        // 查找图片类型
+        const imageType = item.types.find(type => type.startsWith('image/'));
+        if (imageType) {
+          event.preventDefault();
+          event.stopPropagation();
+          const blob = await item.getType(imageType);
+          uploadAndInsert(blob);
+          return;
+        }
+      }
+    } catch (error) {
+      // Clipboard API 可能因权限问题失败，静默处理
+      console.log('[MarkdownEditor] Clipboard API not available or permission denied:', error);
     }
   }
 
@@ -268,6 +302,7 @@
   onDestroy(() => {
     if (editor) {
       editor.container.removeEventListener('paste', handlePaste);
+      editor.container.removeEventListener('click', handleMobilePasteClick);
       editor.destroy();
     }
   });
