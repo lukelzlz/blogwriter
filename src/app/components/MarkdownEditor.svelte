@@ -210,25 +210,39 @@
     const selection = editor.getSelection();
     const selectedText = editor.getSelectedText();
     
+    // 成对符号映射：完整文本 -> [前缀, 后缀]
+    const pairMap: Record<string, [string, string]> = {
+      '****': ['**', '**'],      // 粗体
+      '**': ['*', '*'],          // 斜体
+      '``': ['`', '`'],          // 行内代码
+      '~~~~': ['~~', '~~'],      // 删除线
+      '[]()': ['[', ']()'],      // 链接
+      '![]()': ['![', ']()'],    // 图片
+    };
+    
     if (selectedText) {
       // 如果有选中文本，根据快捷键类型包裹文本
       let wrappedText = text;
-      if (text === '**') {
-        wrappedText = `**${selectedText}**`;
-      } else if (text === '*') {
-        wrappedText = `*${selectedText}*`;
-      } else if (text === '`') {
-        wrappedText = `\`${selectedText}\``;
-      } else if (text === '~~') {
-        wrappedText = `~~${selectedText}~~`;
-      } else if (text === '[]()') {
-        wrappedText = `[${selectedText}]()`;
-        cursorOffset = -1; // 光标放在括号内
+      let newCursorOffset = 0;
+      
+      if (pairMap[text]) {
+        const [prefix, suffix] = pairMap[text];
+        wrappedText = `${prefix}${selectedText}${suffix}`;
+        // 链接和图片需要把光标放在 () 内
+        if (text === '[]()' || text === '![]()') {
+          newCursorOffset = -1; // 光标放在括号内
+        }
       } else {
         // 其他情况直接替换
         wrappedText = text;
       }
       editor.insert(wrappedText);
+      
+      // 移动光标（如果需要）
+      if (newCursorOffset !== 0) {
+        const pos = editor.getCursorPosition();
+        editor.moveCursorTo(pos.row, pos.column + newCursorOffset);
+      }
     } else {
       // 没有选中文本，直接插入
       editor.insert(text);
@@ -703,28 +717,28 @@
       
       <button
         class="shortcut-btn"
-        on:mousedown|preventDefault={() => insertShortcut('**', -2)}
+        on:mousedown|preventDefault={() => insertShortcut('****', -2)}
         on:touchstart={handleTouchStart}
         on:touchmove={handleTouchMove}
-        on:touchend={handleTouchEnd(() => insertShortcut('**', -2))}
+        on:touchend={handleTouchEnd(() => insertShortcut('****', -2))}
         aria-label="粗体"
       >**</button>
       
       <button
         class="shortcut-btn"
-        on:mousedown|preventDefault={() => insertShortcut('*', -1)}
+        on:mousedown|preventDefault={() => insertShortcut('**', -1)}
         on:touchstart={handleTouchStart}
         on:touchmove={handleTouchMove}
-        on:touchend={handleTouchEnd(() => insertShortcut('*', -1))}
+        on:touchend={handleTouchEnd(() => insertShortcut('**', -1))}
         aria-label="斜体"
       >*</button>
       
       <button
         class="shortcut-btn"
-        on:mousedown|preventDefault={() => insertShortcut('`', -1)}
+        on:mousedown|preventDefault={() => insertShortcut('``', -1)}
         on:touchstart={handleTouchStart}
         on:touchmove={handleTouchMove}
-        on:touchend={handleTouchEnd(() => insertShortcut('`', -1))}
+        on:touchend={handleTouchEnd(() => insertShortcut('``', -1))}
         aria-label="行内代码"
       >`</button>
       
@@ -775,10 +789,10 @@
       
       <button
         class="shortcut-btn"
-        on:mousedown|preventDefault={() => insertShortcut('~~', -2)}
+        on:mousedown|preventDefault={() => insertShortcut('~~~~', -2)}
         on:touchstart={handleTouchStart}
         on:touchmove={handleTouchMove}
-        on:touchend={handleTouchEnd(() => insertShortcut('~~', -2))}
+        on:touchend={handleTouchEnd(() => insertShortcut('~~~~', -2))}
         aria-label="删除线"
       >~~</button>
       
