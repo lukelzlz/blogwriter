@@ -166,12 +166,7 @@
   // 处理视口滚动（iOS 上滑动页面时 visualViewport 会滚动）
   function handleViewportScroll() {
     if (window.visualViewport) {
-      const rawOffset = window.visualViewport.offsetTop;
-      const viewportHeight = window.visualViewport.height;
-      const shortcutBarHeight = 52; // 快捷栏大约高度
-      // 限制偏移量，确保快捷栏不会被推出可视区域
-      const maxOffset = Math.max(0, viewportHeight - shortcutBarHeight - keyboardHeight);
-      viewportOffsetTop = Math.min(rawOffset, maxOffset);
+      viewportOffsetTop = window.visualViewport.offsetTop;
     }
   }
   
@@ -676,7 +671,7 @@
 
 <!-- 移动端快捷键栏 -->
 {#if isMobile && showShortcutBar}
-  <div class="shortcut-bar" style="bottom: {keyboardHeight}px; transform: translateY({viewportOffsetTop}px);">
+  <div class="shortcut-bar" style="bottom: {keyboardHeight - viewportOffsetTop}px;">
     <div class="shortcut-bar-inner">
       <!-- 粘贴按钮 -->
       <button
@@ -1000,8 +995,8 @@
     z-index: 1000;
     padding: 0;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-    transition: transform 0.1s ease-out;
-    will-change: transform;
+    transition: bottom 0.1s ease-out;
+    will-change: bottom;
   }
 
   :global(.shortcut-bar-inner) {
