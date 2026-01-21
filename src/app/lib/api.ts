@@ -1,5 +1,5 @@
 import { auth } from '$stores/auth';
-import type { Post, CreatePostParams, UpdatePostParams, ApiResponse, ImageUploadParams, ImageUploadResponse } from '$shared/types';
+import type { Post, CreatePostParams, UpdatePostParams, ApiResponse, ImageUploadParams, ImageUploadResponse, S3Config } from '$shared/types';
 
 // API 基础 URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -213,6 +213,14 @@ export const imageApi = {
       }
       xhr.timeout = 120000; // 2分钟超时
       xhr.send(JSON.stringify(params));
+    });
+  },
+
+  // 删除图片
+  async delete(key: string, config: S3Config): Promise<ApiResponse<{ success: boolean }>> {
+    return request<{ success: boolean }>('/api/upload/delete', {
+      method: 'POST',
+      body: JSON.stringify({ key, config }),
     });
   },
 };

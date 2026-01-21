@@ -261,7 +261,7 @@
   }
 
   // 图片上传处理
-  async function handleImageUpload(file: Blob, onProgress?: (progress: number) => void): Promise<string | null> {
+  async function handleImageUpload(file: Blob, onProgress?: (progress: number) => void): Promise<{ url: string; key: string } | null> {
     const s3Config = $auth.s3Config;
     if (!s3Config) {
       alert('请先在设置页面配置图床');
@@ -289,7 +289,7 @@
       }, onProgress);
 
       if (response.success && response.data) {
-        return response.data.url;
+        return { url: response.data.url, key: response.data.key };
       } else {
         console.error('Image upload failed:', response.error);
         alert('图片上传失败: ' + (response.error || '未知错误'));
@@ -299,6 +299,20 @@
       console.error('Image upload error:', err);
       alert('图片上传失败');
       return null;
+    }
+  }
+
+  // 图片删除处理
+  async function handleImageDelete(key: string): Promise<boolean> {
+    const s3Config = $auth.s3Config;
+    if (!s3Config) return false;
+
+    try {
+      const response = await imageApi.delete(key, s3Config);
+      return response.success;
+    } catch (err) {
+      console.error('Image delete error:', err);
+      return false;
     }
   }
 </script>
@@ -357,6 +371,7 @@
             placeholder="开始编写你的文章..."
             onChange={(content) => editor.setContent(content)}
             onImageUpload={$auth.s3Config ? handleImageUpload : undefined}
+            onImageDelete={$auth.s3Config ? handleImageDelete : undefined}
           />
         </div>
       </div>

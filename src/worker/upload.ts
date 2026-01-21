@@ -96,6 +96,105 @@ function buildPublicUrl(config: S3Config, key: string): string {
   return buildS3Url(config, key);
 }
 
+// AWS Signature V4 签名并删除
+async function deleteFromS3(
+  key: string,
+  config: S3Config
+): Promise<{ success: boolean; error?: string }> {
+  const now = new Date();
+  const amzDate = formatAmzDate(now);
+  const dateStamp = formatDateStamp(now);
+  
+  const endpoint = config.endpoint.replace(/^https?:\/\//, '');
+  const host = config.forcePathStyle ? endpoint : `${config.bucket}.${endpoint}`;
+  const url = buildS3Url(config, key);
+  
+  // 空 payload 的哈希
+  const payloadHash = bufferToHex(await sha256(''));
+  
+  // 构建规范请求
+  const method = 'DELETE';
+  const canonicalUri = config.forcePathStyle ? `/${config.bucket}/${key}` : `/${key}`;
+  const canonicalQueryString = '';
+  
+  const headers: Record<string, string> = {
+    'host': host,
+    'x-amz-content-sha256': payloadHash,
+    'x-amz-date': amzDate,
+  };
+  
+  // 按字母顺序排序 header 名称
+  const sortedHeaderNames = Object.keys(headers).sort();
+  const canonicalHeaders = sortedHeaderNames
+    .map(name => `${name}:${headers[name]}\n`)
+    .join('');
+  const signedHeaders = sortedHeaderNames.join(';');
+  
+  const canonicalRequest = [
+    method,
+    canonicalUri,
+    canonicalQueryString,
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join('\n');
+  
+  // 构建待签名字符串
+  const algorithm = 'AWS4-HMAC-SHA256';
+  const credentialScope = `${dateStamp}/${config.region}/s3/aws4_request`;
+  const canonicalRequestHash = bufferToHex(await sha256(canonicalRequest));
+  
+  const stringToSign = [
+    algorithm,
+    amzDate,
+    credentialScope,
+    canonicalRequestHash,
+  ].join('\n');
+  
+  // 计算签名
+  const signingKey = await getSignatureKey(
+    config.secretAccessKey,
+    dateStamp,
+    config.region,
+    's3'
+  );
+  const signature = bufferToHex(await hmacSha256(signingKey, stringToSign));
+  
+  // 构建 Authorization header
+  const authorization = `${algorithm} Credential=${config.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  
+  // 发送请求
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': authorization,
+        'Host': host,
+        'x-amz-content-sha256': payloadHash,
+        'x-amz-date': amzDate,
+      },
+    });
+    
+    // S3 DELETE 成功返回 204 No Content
+    if (response.ok || response.status === 204 || response.status === 200) {
+      return { success: true };
+    } else {
+      const errorText = await response.text();
+      console.error('S3 delete failed:', response.status, errorText);
+      return {
+        success: false,
+        error: `删除失败: ${response.status} - ${errorText}`,
+      };
+    }
+  } catch (error) {
+    console.error('S3 delete error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '删除请求失败',
+    };
+  }
+}
+
 // AWS Signature V4 签名并上传
 async function uploadToS3(
   imageData: ArrayBuffer,
@@ -299,8 +398,76 @@ export async function handleUpload(
     }
   } catch (error) {
     console.error('Upload handler error:', error);
-    return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : '上传处理失败' 
+    return new Response(JSON.stringify({
+      error: error instanceof Error ? error.message : '上传处理失败'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+}
+
+// 删除请求参数类型
+interface ImageDeleteParams {
+  key: string;
+  config: S3Config;
+}
+
+// 处理删除请求
+export async function handleDelete(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  // 只允许 DELETE 或 POST 请求
+  if (request.method !== 'DELETE' && request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+  
+  try {
+    // 解析请求体
+    const body = await request.json() as ImageDeleteParams;
+    const { key, config } = body;
+    
+    // 验证必要参数
+    if (!key || !config) {
+      return new Response(JSON.stringify({ error: '缺少必要参数' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+    
+    // 验证 S3 配置
+    if (!config.endpoint || !config.region || !config.accessKeyId ||
+        !config.secretAccessKey || !config.bucket) {
+      return new Response(JSON.stringify({ error: 'S3 配置不完整' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+    
+    // 删除文件
+    const result = await deleteFromS3(key, config);
+    
+    if (result.success) {
+      return new Response(JSON.stringify({ data: { success: true } }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    } else {
+      return new Response(JSON.stringify({ error: result.error }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+  } catch (error) {
+    console.error('Delete handler error:', error);
+    return new Response(JSON.stringify({
+      error: error instanceof Error ? error.message : '删除处理失败'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },

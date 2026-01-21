@@ -4,11 +4,18 @@
   import 'ace-builds/src-noconflict/mode-markdown';
   import 'ace-builds/src-noconflict/theme-github';
 
+  // 上传结果类型
+  interface UploadResult {
+    url: string;
+    key: string;
+  }
+
   export let content = '';
   export let placeholder = '开始编写你的文章...';
   export let readonly = false;
   export let onChange: ((content: string) => void) | undefined = undefined;
-  export let onImageUpload: ((file: Blob, onProgress?: (progress: number) => void) => Promise<string | null>) | undefined = undefined;
+  export let onImageUpload: ((file: Blob, onProgress?: (progress: number) => void) => Promise<UploadResult | null>) | undefined = undefined;
+  export let onImageDelete: ((key: string) => Promise<boolean>) | undefined = undefined;
 
   let editorContainer: HTMLDivElement;
   let wrapperContainer: HTMLDivElement;
@@ -19,6 +26,12 @@
   let isDragging = false;
   let isUploading = false;
   let uploadProgress = 0;
+  
+  // 撤回相关状态
+  let showUndoToast = false;
+  let undoCountdown = 30;
+  let undoTimer: ReturnType<typeof setInterval> | null = null;
+  let lastUploadedImage: { url: string; key: string; markdownText: string } | null = null;
 
   onMount(() => {
     console.log('[MarkdownEditor] onMount called');
@@ -232,24 +245,28 @@
   async function uploadAndInsert(blob: Blob) {
     if (!onImageUpload || !editor) return;
     
+    // 清除之前的撤回状态
+    clearUndoTimer();
+    
     isUploading = true;
     uploadProgress = 0;
     
     // 1. 在光标位置插入占位符
     const placeholderId = Date.now();
-    const placeholder = `![上传中...](uploading-${placeholderId})`;
-    insertTextAtCursor(placeholder);
+    const placeholderText = `![上传中...](uploading-${placeholderId})`;
+    insertTextAtCursor(placeholderText);
     
     try {
       // 2. 上传图片（带进度回调）
-      const url = await onImageUpload(blob, (progress) => {
+      const result = await onImageUpload(blob, (progress) => {
         uploadProgress = progress;
       });
       
       // 3. 替换占位符
-      if (url) {
+      if (result) {
+        const markdownText = `![](${result.url})`;
         const currentContent = editor.getValue();
-        const newContent = currentContent.replace(placeholder, `![](${url})`);
+        const newContent = currentContent.replace(placeholderText, markdownText);
         isInternalUpdate = true;
         const cursorPos = editor.getCursorPosition();
         editor.setValue(newContent, -1);
@@ -262,10 +279,13 @@
             onChange(newContent);
           }
         });
+        
+        // 显示撤回提示
+        startUndoTimer(result.url, result.key, markdownText);
       } else {
         // 上传失败，移除占位符
         const currentContent = editor.getValue();
-        const newContent = currentContent.replace(placeholder, '');
+        const newContent = currentContent.replace(placeholderText, '');
         isInternalUpdate = true;
         editor.setValue(newContent, -1);
         lastExternalContent = newContent;
@@ -280,7 +300,7 @@
       console.error('Image upload failed:', error);
       // 上传失败，移除占位符
       const currentContent = editor.getValue();
-      const newContent = currentContent.replace(placeholder, '');
+      const newContent = currentContent.replace(placeholderText, '');
       isInternalUpdate = true;
       editor.setValue(newContent, -1);
       lastExternalContent = newContent;
@@ -294,6 +314,60 @@
       isUploading = false;
       uploadProgress = 0;
     }
+  }
+
+  // 开始撤回倒计时
+  function startUndoTimer(url: string, key: string, markdownText: string) {
+    lastUploadedImage = { url, key, markdownText };
+    undoCountdown = 30;
+    showUndoToast = true;
+    
+    undoTimer = setInterval(() => {
+      undoCountdown--;
+      if (undoCountdown <= 0) {
+        clearUndoTimer();
+      }
+    }, 1000);
+  }
+
+  // 清除撤回计时器
+  function clearUndoTimer() {
+    if (undoTimer) {
+      clearInterval(undoTimer);
+      undoTimer = null;
+    }
+    showUndoToast = false;
+    lastUploadedImage = null;
+  }
+
+  // 执行撤回
+  async function handleUndo() {
+    if (!lastUploadedImage || !onImageDelete || !editor) return;
+    
+    const { key, markdownText } = lastUploadedImage;
+    
+    // 1. 从编辑器中移除图片 markdown
+    const currentContent = editor.getValue();
+    const newContent = currentContent.replace(markdownText, '');
+    isInternalUpdate = true;
+    editor.setValue(newContent, -1);
+    lastExternalContent = newContent;
+    tick().then(() => {
+      isInternalUpdate = false;
+      if (onChange) {
+        onChange(newContent);
+      }
+    });
+    
+    // 2. 删除远程文件
+    try {
+      await onImageDelete(key);
+    } catch (error) {
+      console.error('Failed to delete image:', error);
+    }
+    
+    // 3. 清除撤回状态
+    clearUndoTimer();
   }
 
   // 外部内容更新时同步到编辑器
@@ -328,6 +402,7 @@
   }
 
   onDestroy(() => {
+    clearUndoTimer();
     if (editor) {
       editor.container.removeEventListener('paste', handlePaste);
       editor.container.removeEventListener('click', handleMobilePasteClick);
@@ -368,6 +443,28 @@
         <div class="upload-progress-bar" style="width: {uploadProgress}%"></div>
       </div>
       <span>{uploadProgress}%</span>
+    </div>
+  {/if}
+  
+  {#if showUndoToast && onImageDelete}
+    <div class="undo-toast">
+      <div class="undo-toast-content">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span>图片已上传</span>
+        <span class="undo-countdown">{undoCountdown}s</span>
+      </div>
+      <button class="undo-btn" on:click={handleUndo}>
+        撤回
+      </button>
+      <button class="undo-close" on:click={clearUndoTimer} aria-label="关闭">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     </div>
   {/if}
 </div>
@@ -464,10 +561,102 @@
     color: #6b7280;
   }
 
+  /* 撤回提示 */
+  .undo-toast {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #1f2937;
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+    animation: slideDown 0.3s ease-out;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-1rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+
+  .undo-toast-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .undo-countdown {
+    color: #9ca3af;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .undo-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .undo-btn:hover {
+    background: #2563eb;
+  }
+
+  .undo-close {
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    padding: 0.25rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .undo-close:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
   /* 移动端适配 */
   @media (max-width: 768px) {
     :global(.ace_editor) {
       font-size: 16px;
+    }
+    
+    .undo-toast {
+      left: 1rem;
+      right: 1rem;
+      transform: none;
+    }
+    
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-1rem);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
   }
 </style>
