@@ -144,22 +144,6 @@
     }
   }
 
-  function handleClearConfig() {
-    if (confirm('确定要清除所有配置吗？这将清除本地存储的仓库和路径配置。')) {
-      localStorage.clear();
-      window.location.reload();
-    }
-  }
-
-  function getLocalStorageInfo() {
-    return {
-      sessionId: localStorage.getItem('sessionId'),
-      user: localStorage.getItem('user'),
-      repo: localStorage.getItem('repo'),
-      postsPath: localStorage.getItem('postsPath'),
-      s3Config: localStorage.getItem('s3Config') ? '已配置' : '未配置',
-    };
-  }
 </script>
 
 <div class="max-w-2xl mx-auto space-y-6">
@@ -541,22 +525,6 @@
     {:else}
       <p class="text-gray-500 text-sm">尚未配置仓库</p>
     {/if}
-  </div>
-
-  <!-- 调试信息 -->
-  <div class="bg-white rounded-lg shadow-sm p-6">
-    <h3 class="text-lg font-semibold mb-3">调试信息</h3>
-    <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-      <pre class="text-xs overflow-x-auto">
-{JSON.stringify(getLocalStorageInfo(), null, 2)}
-      </pre>
-    </div>
-    <button
-      on:click={handleClearConfig}
-      class="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition"
-    >
-      清除所有配置
-    </button>
   </div>
 
   <!-- 帮助信息 -->
