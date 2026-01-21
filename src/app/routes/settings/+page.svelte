@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { auth } from '$stores/auth';
   import { repoApi } from '$lib/api';
   import { S3_PROVIDERS, getDefaultS3Config } from '$lib/s3-presets';
@@ -19,22 +20,28 @@
   let s3Success = '';
   let showSecretKey = false;
 
-  // 设置默认值：仓库所有者默认为用户ID，仓库名称默认为"blog"
-  $: if ($auth.repo) {
-    owner = $auth.repo.owner;
-    repo = $auth.repo.name;
-  } else if ($auth.user?.login && !owner) {
-    owner = $auth.user.login;
-  }
+  // 初始化标志，防止响应式语句覆盖用户输入
+  let initialized = false;
 
-  $: if ($auth.postsPath) {
-    postsPath = $auth.postsPath;
-  }
+  // 组件挂载时初始化值
+  onMount(() => {
+    if ($auth.repo) {
+      owner = $auth.repo.owner;
+      repo = $auth.repo.name;
+    } else if ($auth.user?.login) {
+      owner = $auth.user.login;
+    }
 
-  // 恢复 S3 配置
-  $: if ($auth.s3Config) {
-    s3Config = { ...$auth.s3Config };
-  }
+    if ($auth.postsPath) {
+      postsPath = $auth.postsPath;
+    }
+
+    if ($auth.s3Config) {
+      s3Config = { ...$auth.s3Config };
+    }
+
+    initialized = true;
+  });
 
   // 当服务商改变时，更新 forcePathStyle 和清空区域
   function handleProviderChange() {
