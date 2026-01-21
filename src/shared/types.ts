@@ -98,6 +98,7 @@ export interface S3Config {
   publicUrl: string;          // 公开访问 URL 前缀（CDN 域名）
   pathPrefix: string;         // 路径前缀，如 blog/images
   forcePathStyle: boolean;    // 是否使用路径风格（MinIO 等需要）
+  urlSuffix?: string;         // URL 后缀，如 -ys（用于 CDN 图片处理样式）
 }
 
 // 预设服务商配置

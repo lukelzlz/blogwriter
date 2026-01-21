@@ -89,11 +89,18 @@ function buildS3Url(config: S3Config, key: string): string {
 
 // 构建公开访问 URL
 function buildPublicUrl(config: S3Config, key: string): string {
+  let url: string;
   if (config.publicUrl) {
     const baseUrl = config.publicUrl.replace(/\/$/, '');
-    return `${baseUrl}/${key}`;
+    url = `${baseUrl}/${key}`;
+  } else {
+    url = buildS3Url(config, key);
   }
-  return buildS3Url(config, key);
+  // 添加 URL 后缀（如 CDN 图片处理样式）
+  if (config.urlSuffix) {
+    url = `${url}${config.urlSuffix}`;
+  }
+  return url;
 }
 
 // AWS Signature V4 签名并删除

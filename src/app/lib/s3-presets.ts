@@ -150,5 +150,6 @@ export function getDefaultS3Config(): import('$shared/types').S3Config {
     publicUrl: '',
     pathPrefix: '',
     forcePathStyle: false,
+    urlSuffix: '',
   };
 }

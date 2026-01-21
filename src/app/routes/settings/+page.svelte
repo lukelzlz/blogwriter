@@ -528,6 +528,23 @@
         </p>
       </div>
 
+      <!-- URL 后缀 -->
+      <div>
+        <label for="s3UrlSuffix" class="block text-sm font-medium text-gray-700 mb-2">
+          URL 后缀（可选）
+        </label>
+        <input
+          id="s3UrlSuffix"
+          type="text"
+          bind:value={s3Config.urlSuffix}
+          placeholder="例如: -ys"
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+        <p class="text-sm text-gray-500 mt-1">
+          图片 URL 后缀，用于 CDN 图片处理样式（如七牛云的 -ys）
+        </p>
+      </div>
+
       <!-- 路径风格 -->
       <div class="flex items-center">
         <input
@@ -592,6 +609,12 @@
             <p class="text-sm">
               <span class="font-medium">路径前缀:</span>
               <span class="ml-1">{$auth.s3Config.pathPrefix}</span>
+            </p>
+          {/if}
+          {#if $auth.s3Config.urlSuffix}
+            <p class="text-sm">
+              <span class="font-medium">URL 后缀:</span>
+              <span class="ml-1">{$auth.s3Config.urlSuffix}</span>
             </p>
           {/if}
         </div>
