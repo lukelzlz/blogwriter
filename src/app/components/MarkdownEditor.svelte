@@ -166,7 +166,12 @@
   // 处理视口滚动（iOS 上滑动页面时 visualViewport 会滚动）
   function handleViewportScroll() {
     if (window.visualViewport) {
-      viewportOffsetTop = window.visualViewport.offsetTop;
+      const rawOffset = window.visualViewport.offsetTop;
+      const viewportHeight = window.visualViewport.height;
+      const shortcutBarHeight = 52; // 快捷栏大约高度
+      // 限制偏移量，确保快捷栏不会被推出可视区域
+      const maxOffset = Math.max(0, viewportHeight - shortcutBarHeight - keyboardHeight);
+      viewportOffsetTop = Math.min(rawOffset, maxOffset);
     }
   }
   
