@@ -40,3 +40,4 @@ dev-db.*
 *.swp
 *.swo
 *~
+builddeploy.sh
