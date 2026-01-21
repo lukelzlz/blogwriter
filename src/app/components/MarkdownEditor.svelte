@@ -8,7 +8,7 @@
   export let placeholder = '开始编写你的文章...';
   export let readonly = false;
   export let onChange: ((content: string) => void) | undefined = undefined;
-  export let onImageUpload: ((file: Blob) => Promise<string | null>) | undefined = undefined;
+  export let onImageUpload: ((file: Blob, onProgress?: (progress: number) => void) => Promise<string | null>) | undefined = undefined;
 
   let editorContainer: HTMLDivElement;
   let wrapperContainer: HTMLDivElement;
@@ -18,6 +18,7 @@
   let lastReadonly = false;
   let isDragging = false;
   let isUploading = false;
+  let uploadProgress = 0;
 
   onMount(() => {
     console.log('[MarkdownEditor] onMount called');
@@ -232,6 +233,7 @@
     if (!onImageUpload || !editor) return;
     
     isUploading = true;
+    uploadProgress = 0;
     
     // 1. 在光标位置插入占位符
     const placeholderId = Date.now();
@@ -239,8 +241,10 @@
     insertTextAtCursor(placeholder);
     
     try {
-      // 2. 上传图片
-      const url = await onImageUpload(blob);
+      // 2. 上传图片（带进度回调）
+      const url = await onImageUpload(blob, (progress) => {
+        uploadProgress = progress;
+      });
       
       // 3. 替换占位符
       if (url) {
@@ -288,6 +292,7 @@
       });
     } finally {
       isUploading = false;
+      uploadProgress = 0;
     }
   }
 
@@ -359,8 +364,10 @@
   
   {#if isUploading}
     <div class="upload-indicator">
-      <div class="upload-spinner"></div>
-      <span>上传中...</span>
+      <div class="upload-progress-container">
+        <div class="upload-progress-bar" style="width: {uploadProgress}%"></div>
+      </div>
+      <span>{uploadProgress}%</span>
     </div>
   {/if}
 </div>
@@ -420,27 +427,30 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(59, 130, 246, 0.9);
+    background: rgba(59, 130, 246, 0.95);
     color: white;
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
     font-size: 0.875rem;
+    font-weight: 500;
     z-index: 10;
+    min-width: 120px;
   }
 
-  .upload-spinner {
-    width: 1rem;
-    height: 1rem;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+  .upload-progress-container {
+    flex: 1;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    overflow: hidden;
+    min-width: 60px;
   }
 
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
+  .upload-progress-bar {
+    height: 100%;
+    background: white;
+    border-radius: 3px;
+    transition: width 0.15s ease-out;
   }
 
   :global(.ace_editor) {

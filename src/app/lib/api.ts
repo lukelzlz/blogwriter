@@ -162,11 +162,57 @@ export const repoApi = {
 
 // 图片上传 API
 export const imageApi = {
-  // 上传图片到 S3 兼容存储
-  async upload(params: ImageUploadParams): Promise<ApiResponse<ImageUploadResponse>> {
-    return request<ImageUploadResponse>('/api/upload', {
-      method: 'POST',
-      body: JSON.stringify(params),
+  // 上传图片到 S3 兼容存储（支持进度回调）
+  upload(
+    params: ImageUploadParams,
+    onProgress?: (progress: number) => void
+  ): Promise<ApiResponse<ImageUploadResponse>> {
+    return new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      const url = `${API_BASE_URL}/api/upload`;
+      
+      // 监听上传进度
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable && onProgress) {
+          const progress = Math.round((event.loaded / event.total) * 100);
+          onProgress(progress);
+        }
+      });
+      
+      // 监听完成
+      xhr.addEventListener('load', () => {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const unwrappedData = data.data !== undefined ? data.data : data;
+            resolve({ success: true, data: unwrappedData });
+          } else {
+            resolve({ success: false, error: data.error || 'Upload failed' });
+          }
+        } catch {
+          resolve({ success: false, error: 'Invalid response' });
+        }
+      });
+      
+      // 监听错误
+      xhr.addEventListener('error', () => {
+        resolve({ success: false, error: 'Network error' });
+      });
+      
+      // 监听超时
+      xhr.addEventListener('timeout', () => {
+        resolve({ success: false, error: 'Request timeout' });
+      });
+      
+      // 发送请求
+      xhr.open('POST', url);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      const sessionId = localStorage.getItem('sessionId');
+      if (sessionId) {
+        xhr.setRequestHeader('Authorization', `Bearer ${sessionId}`);
+      }
+      xhr.timeout = 120000; // 2分钟超时
+      xhr.send(JSON.stringify(params));
     });
   },
 };

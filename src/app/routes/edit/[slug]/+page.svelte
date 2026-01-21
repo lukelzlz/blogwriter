@@ -261,7 +261,7 @@
   }
 
   // 图片上传处理
-  async function handleImageUpload(file: Blob): Promise<string | null> {
+  async function handleImageUpload(file: Blob, onProgress?: (progress: number) => void): Promise<string | null> {
     const s3Config = $auth.s3Config;
     if (!s3Config) {
       alert('请先在设置页面配置图床');
@@ -286,7 +286,7 @@
         imageData: base64,
         mimeType: file.type || 'image/png',
         config: s3Config,
-      });
+      }, onProgress);
 
       if (response.success && response.data) {
         return response.data.url;
