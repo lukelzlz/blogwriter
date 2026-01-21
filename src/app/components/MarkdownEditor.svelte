@@ -995,6 +995,8 @@
     z-index: 1000;
     padding: 0;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.1s ease-out;
+    will-change: transform;
   }
 
   :global(.shortcut-bar-inner) {
