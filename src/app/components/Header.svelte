@@ -18,7 +18,7 @@
   }
 </script>
 
-<header class="bg-gray-900 text-white shadow-md">
+<header class="bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg">
   <div class="container mx-auto px-4 py-4">
     <div class="flex items-center justify-between">
       <!-- Logo -->
@@ -36,9 +36,9 @@
 
       <!-- Desktop Navigation -->
       <nav class="hidden md:flex items-center space-x-6">
-        <a href="/" class="hover:text-gray-300 transition">文章列表</a>
+        <a href="/" class="hover:text-primary-200 transition">文章列表</a>
         {#if $auth.isAuthenticated}
-          <a href="/new" class="hover:text-gray-300 transition">新建文章</a>
+          <a href="/new" class="hover:text-primary-200 transition">新建文章</a>
         {/if}
       </nav>
 
@@ -93,7 +93,7 @@
         {:else}
           <a
             href="/login"
-            class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md transition"
+            class="bg-white text-primary-600 hover:bg-primary-50 px-4 py-2 rounded-md transition font-medium"
           >
             登录
           </a>
@@ -128,35 +128,35 @@
 
     <!-- Mobile Navigation -->
     {#if showMobileMenu}
-      <nav class="md:hidden mt-4 pb-4 border-t border-gray-700 pt-4">
-        <a href="/" class="block py-2 hover:text-gray-300" on:click={() => (showMobileMenu = false)}
+      <nav class="md:hidden mt-4 pb-4 border-t border-primary-500 pt-4">
+        <a href="/" class="block py-2 hover:text-primary-200" on:click={() => (showMobileMenu = false)}
           >文章列表</a
         >
         {#if $auth.isAuthenticated}
           <a
             href="/new"
-            class="block py-2 hover:text-gray-300"
+            class="block py-2 hover:text-primary-200"
             on:click={() => (showMobileMenu = false)}
           >
             新建文章
           </a>
           <a
             href="/settings"
-            class="block py-2 hover:text-gray-300"
+            class="block py-2 hover:text-primary-200"
             on:click={() => (showMobileMenu = false)}
           >
             设置
           </a>
           <button
             on:click={handleLogout}
-            class="block w-full text-left py-2 text-red-400 hover:text-red-300"
+            class="block w-full text-left py-2 text-red-300 hover:text-red-200"
           >
             登出
           </button>
         {:else}
           <a
             href="/login"
-            class="block py-2 text-blue-400 hover:text-blue-300"
+            class="block py-2 text-primary-200 hover:text-white"
             on:click={() => (showMobileMenu = false)}
           >
             登录

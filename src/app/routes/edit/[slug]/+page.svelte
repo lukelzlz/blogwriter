@@ -338,7 +338,7 @@
             type="text"
             bind:value={$editor.title}
             placeholder="文章标题"
-            class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
         <div class="flex items-center space-x-2">
@@ -351,12 +351,12 @@
             <span class="text-sm text-orange-600">未保存</span>
           {/if}
           {#if $editor.isSaving}
-            <span class="text-sm text-blue-600">保存中...</span>
+            <span class="text-sm text-primary-600">保存中...</span>
           {/if}
           <button
             on:click={handleSave}
             disabled={$editor.isSaving}
-            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+            class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             保存
           </button>
@@ -395,7 +395,7 @@
           </button>
           <button
             on:click={restoreDraft}
-            class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition"
+            class="px-4 py-2 bg-primary-600 text-white hover:bg-primary-700 rounded-md transition"
           >
             恢复草稿
           </button>

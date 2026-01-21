@@ -147,7 +147,7 @@
 </script>
 
 <div class="max-w-2xl mx-auto space-y-6">
-  <h1 class="text-3xl font-bold text-gray-900 mb-6">设置</h1>
+  <h1 class="text-3xl font-bold text-primary-950 mb-6">设置</h1>
 
   <!-- GitHub 仓库配置 -->
   <div class="bg-white rounded-lg shadow-sm p-6">
@@ -178,7 +178,7 @@
           type="text"
           bind:value={owner}
           placeholder="例如: username"
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
         <p class="text-sm text-gray-500 mt-1">
           GitHub 用户名或组织名称
@@ -194,7 +194,7 @@
           type="text"
           bind:value={repo}
           placeholder="例如: blog"
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
         <p class="text-sm text-gray-500 mt-1">
           Hexo 博客仓库的名称
@@ -210,7 +210,7 @@
           type="text"
           bind:value={postsPath}
           placeholder="例如: source/_posts"
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
         <p class="text-sm text-gray-500 mt-1">
           Hexo 博客文章所在的目录路径（默认: source/_posts）
@@ -221,7 +221,7 @@
         <button
           on:click={handleSave}
           disabled={loading}
-          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+          class="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {#if loading}
             <span>保存中...</span>
@@ -262,7 +262,7 @@
           id="s3Provider"
           bind:value={s3Config.provider}
           on:change={handleProviderChange}
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <option value="">请选择服务商</option>
           {#each Object.entries(S3_PROVIDERS) as [key, provider]}
@@ -282,7 +282,7 @@
               id="s3Region"
               bind:value={s3Config.region}
               on:change={handleRegionChange}
-              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               <option value="">请选择区域</option>
               {#each S3_PROVIDERS[s3Config.provider].regions as region}
@@ -295,7 +295,7 @@
               type="text"
               bind:value={s3Config.region}
               placeholder="例如: us-east-1"
-              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           {/if}
         </div>
@@ -311,7 +311,7 @@
           type="text"
           bind:value={s3Config.endpoint}
           placeholder="例如: s3.us-east-1.amazonaws.com"
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
         <p class="text-sm text-gray-500 mt-1">
           S3 服务端点地址（不含 https://）
@@ -328,7 +328,7 @@
           type="text"
           bind:value={s3Config.accessKeyId}
           placeholder="输入 Access Key ID"
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
       </div>
 
@@ -344,7 +344,7 @@
               type="text"
               bind:value={s3Config.secretAccessKey}
               placeholder="输入 Secret Access Key"
-              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
+              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 pr-12"
             />
           {:else}
             <input
@@ -352,7 +352,7 @@
               type="password"
               bind:value={s3Config.secretAccessKey}
               placeholder="输入 Secret Access Key"
-              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
+              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 pr-12"
             />
           {/if}
           <button
@@ -388,7 +388,7 @@
           type="text"
           bind:value={s3Config.bucket}
           placeholder="输入存储桶名称"
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
       </div>
 
@@ -402,7 +402,7 @@
           type="text"
           bind:value={s3Config.publicUrl}
           placeholder="例如: https://cdn.example.com"
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
         <p class="text-sm text-gray-500 mt-1">
           图片的公开访问域名（CDN 域名或存储桶公开 URL）
@@ -419,7 +419,7 @@
           type="text"
           bind:value={s3Config.pathPrefix}
           placeholder="例如: blog/images"
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
         <p class="text-sm text-gray-500 mt-1">
           上传文件的路径前缀，不需要以 / 开头或结尾
@@ -432,7 +432,7 @@
           id="s3ForcePathStyle"
           type="checkbox"
           bind:checked={s3Config.forcePathStyle}
-          class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
         />
         <label for="s3ForcePathStyle" class="ml-2 block text-sm text-gray-700">
           使用路径风格（Path Style）
@@ -446,7 +446,7 @@
         <button
           on:click={handleSaveS3Config}
           disabled={s3Loading}
-          class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {#if s3Loading}
             <span>保存中...</span>
@@ -508,7 +508,7 @@
             href={`https://github.com/${$auth.repo.owner}/${$auth.repo.name}`}
             target="_blank"
             rel="noopener noreferrer"
-            class="text-blue-600 hover:underline ml-1"
+            class="text-primary-600 hover:underline ml-1"
           >
             {$auth.repo.owner}/{$auth.repo.name}
           </a>
@@ -528,14 +528,14 @@
   </div>
 
   <!-- 帮助信息 -->
-  <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
-    <h3 class="text-lg font-semibold mb-3 text-blue-900">
+  <div class="bg-primary-50 border border-primary-200 rounded-lg p-6">
+    <h3 class="text-lg font-semibold mb-3 text-primary-900">
       如何获取仓库信息？
     </h3>
-    <ol class="list-decimal list-inside space-y-2 text-blue-800">
+    <ol class="list-decimal list-inside space-y-2 text-primary-800">
       <li>访问您的 Hexo 博客仓库页面</li>
       <li>查看浏览器地址栏，例如：
-        <code class="bg-blue-100 px-2 py-1 rounded text-sm">
+        <code class="bg-primary-100 px-2 py-1 rounded text-sm">
           https://github.com/username/blog
         </code>
       </li>
@@ -548,11 +548,11 @@
     </ol>
   </div>
 
-  <div class="bg-green-50 border border-green-200 rounded-lg p-6">
-    <h3 class="text-lg font-semibold mb-3 text-green-900">
+  <div class="bg-primary-50 border border-primary-200 rounded-lg p-6">
+    <h3 class="text-lg font-semibold mb-3 text-primary-900">
       图床使用说明
     </h3>
-    <ul class="list-disc list-inside space-y-2 text-green-800">
+    <ul class="list-disc list-inside space-y-2 text-primary-800">
       <li>配置完成后，在编辑器中可以直接 <strong>粘贴图片</strong>（Ctrl+V）自动上传</li>
       <li>也可以将图片 <strong>拖拽</strong> 到编辑器区域上传</li>
       <li>上传成功后会自动插入 Markdown 图片语法</li>

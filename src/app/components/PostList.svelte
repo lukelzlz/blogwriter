@@ -99,7 +99,7 @@
             <div class="flex items-center space-x-2 ml-4">
               <button
                 on:click={() => onEdit(post)}
-                class="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition"
+                class="p-2 text-primary-600 hover:bg-primary-50 rounded-md transition"
                 title="编辑"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

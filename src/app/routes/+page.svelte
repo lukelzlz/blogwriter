@@ -118,11 +118,11 @@
 
 <div class="max-w-4xl mx-auto">
   <div class="flex items-center justify-between mb-6">
-    <h1 class="text-3xl font-bold text-gray-900">文章列表</h1>
+    <h1 class="text-3xl font-bold text-primary-950">文章列表</h1>
     {#if $auth.isAuthenticated}
       <a
         href="/new"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition flex items-center"
+        class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md transition flex items-center shadow-sm"
       >
         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -152,11 +152,11 @@
       <LoginButton />
     </div>
   {:else if !$auth.repo}
-    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-      <p class="text-yellow-800">
+    <div class="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-6">
+      <p class="text-primary-800">
         请先在设置中配置您的 GitHub 仓库信息
       </p>
-      <a href="/settings" class="text-yellow-800 underline mt-2 inline-block">
+      <a href="/settings" class="text-primary-600 hover:text-primary-700 underline mt-2 inline-block font-medium">
         前往设置
       </a>
     </div>

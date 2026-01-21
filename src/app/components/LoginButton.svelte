@@ -36,7 +36,7 @@
   <button
     on:click={handleLogin}
     disabled={loading}
-    class="github-login-btn flex items-center justify-center w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+    class="github-login-btn flex items-center justify-center w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
   >
     {#if loading}
       <div class="loading mr-2"></div>
