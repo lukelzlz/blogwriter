@@ -1099,6 +1099,7 @@
     justify-content: center;
     border-radius: 0.25rem;
     transition: color 0.15s, background 0.15s;
+    margin-left: auto;
   }
 
   .undo-close:hover {
