@@ -5,13 +5,18 @@
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)
-![Svelte](https://img.shields.io/badge/Svelte-5.0.0-orange.svg)
+![Svelte](https://img.shields.io/badge/Svelte-4.2.19-orange.svg)
 
 一个基于 Cloudflare Workers 和 Svelte 的 Hexo 博客管理工具，让您可以在移动设备上轻松管理您的 Hexo 博客。
 
-[功能特性](#功能特性) • [快速开始](#快速开始) • [文档](#文档) • [演示](#演示)
+[功能特性](#功能特性) • [快速开始](#快速开始) • [文档](#文档) • [在线演示](#在线演示)
 
 </div>
+
+## 🌐 在线演示
+
+- **前端应用**: [https://writer.qwqc.cc](https://writer.qwqc.cc)
+- **API 服务**: [https://writer-api.qwqc.cc](https://writer-api.qwqc.cc)
 
 ## 📖 简介
 
@@ -26,6 +31,7 @@ Hexo 博客管理器是一个现代化的博客管理工具，专为 Hexo 静态
 - 📝 **强大编辑器** - 基于 Ace Editor 的 Markdown 编辑器，支持实时预览
 - 🔄 **自动保存** - 本地自动保存，防止意外丢失
 - 🖼️ **图片上传** - 支持多种 S3 兼容存储（AWS、阿里云、腾讯云等）
+- 📲 **PWA 支持** - 可安装到桌面，支持离线访问
 
 ## 🎯 功能特性
 
@@ -69,14 +75,16 @@ Hexo 博客管理器是一个现代化的博客管理工具，专为 Hexo 静态
 - **GitHub REST API** - GitHub 仓库操作
 - **GitHub OAuth 2.0** - 用户认证
 - **Cloudflare KV** - 会话存储
+- **AWS Signature V4** - S3 兼容存储签名
 
 ### 前端
 
-- **Svelte 5** - 现代化的前端框架
+- **Svelte 4** - 现代化的前端框架
 - **Tailwind CSS** - 实用优先的 CSS 框架
 - **Ace Editor** - 强大的代码编辑器
 - **marked.js** - Markdown 解析和渲染
 - **Vite** - 快速的构建工具
+- **vite-plugin-pwa** - PWA 支持
 
 ### 存储
 
@@ -112,7 +120,7 @@ npm install
 
 - **Application name**: `Hexo Blog Manager`
 - **Homepage URL**: `https://your-domain.workers.dev`
-- **Authorization callback URL**: `https://your-domain.workers.dev/auth/callback`
+- **Authorization callback URL**: `https://your-api-domain.workers.dev/auth/callback`
 
 记录下 `Client ID` 和 `Client Secret`。
 
@@ -136,7 +144,7 @@ preview_id = "your-preview-kv-namespace-id"
 
 [vars]
 GITHUB_CLIENT_ID = "your-github-client-id"
-GITHUB_REDIRECT_URI = "https://your-domain.workers.dev/auth/callback"
+GITHUB_REDIRECT_URI = "https://your-api-domain.workers.dev/auth/callback"
 ```
 
 #### 4. 设置 GitHub Client Secret
@@ -150,7 +158,7 @@ npx wrangler secret put GITHUB_CLIENT_SECRET
 ### 开发
 
 ```bash
-# 启动开发服务器
+# 启动前端开发服务器
 npm run dev
 
 # 启动 Workers 开发服务器（另一个终端）
@@ -171,7 +179,13 @@ npm run build
 # 登录 Cloudflare
 npx wrangler login
 
-# 部署
+# 部署 Worker（API 服务）
+npm run deploy:worker
+
+# 部署 Pages（前端）
+npm run deploy:pages
+
+# 或一键部署前端
 npm run deploy
 ```
 
@@ -180,7 +194,6 @@ npm run deploy
 - [部署指南](docs/DEPLOYMENT.md) - 详细的部署步骤和配置说明
 - [使用说明](docs/USAGE.md) - 完整的使用教程和功能介绍
 - [技术方案](plans/hexo-blog-manager-plan.md) - 项目架构和设计思路
-- [更新日志](CHANGELOG.md) - 版本更新记录
 
 ## 💡 使用说明
 
@@ -224,11 +237,11 @@ npm run deploy
 blogwriter/
 ├── src/
 │   ├── worker/              # Cloudflare Workers 后端
-│   │   ├── index.ts         # Worker 入口
-│   │   ├── auth.ts          # 认证逻辑
+│   │   ├── index.ts         # Worker 入口，路由分发
+│   │   ├── auth.ts          # GitHub OAuth 认证逻辑
 │   │   ├── github.ts        # GitHub API 封装
-│   │   ├── posts.ts         # 文章管理逻辑
-│   │   └── upload.ts        # 图片上传逻辑
+│   │   ├── posts.ts         # 文章 CRUD 操作
+│   │   └── upload.ts        # S3 图片上传（AWS Signature V4）
 │   ├── app/                 # Svelte 前端
 │   │   ├── components/      # UI 组件
 │   │   │   ├── Header.svelte
@@ -237,73 +250,81 @@ blogwriter/
 │   │   │   ├── PostList.svelte
 │   │   │   └── LoginButton.svelte
 │   │   ├── routes/          # 页面路由
-│   │   │   ├── +page.svelte         # 首页
-│   │   │   ├── login/+page.svelte    # 登录页
-│   │   │   ├── new/+page.svelte      # 新建文章
+│   │   │   ├── +page.svelte         # 首页（文章列表）
+│   │   │   ├── login/+page.svelte   # 登录页
+│   │   │   ├── new/+page.svelte     # 新建文章
 │   │   │   ├── edit/[slug]/+page.svelte  # 编辑文章
-│   │   │   └── settings/+page.svelte # 设置页
+│   │   │   └── settings/+page.svelte # 设置页（S3 配置）
 │   │   ├── stores/          # Svelte stores
-│   │   │   ├── auth.ts
-│   │   │   ├── editor.ts
-│   │   │   └── posts.ts
+│   │   │   ├── auth.ts      # 认证状态管理
+│   │   │   ├── editor.ts    # 编辑器状态管理
+│   │   │   └── posts.ts     # 文章列表状态
 │   │   ├── lib/             # 工具函数
-│   │   │   ├── api.ts
-│   │   │   ├── hexo.ts
-│   │   │   ├── pwa.ts
-│   │   │   ├── s3-presets.ts
-│   │   │   └── utils.ts
-│   │   ├── App.svelte       # 主应用组件
+│   │   │   ├── api.ts       # API 请求封装
+│   │   │   ├── hexo.ts      # Hexo 相关工具
+│   │   │   ├── pwa.ts       # PWA 更新检测
+│   │   │   ├── s3-presets.ts # S3 服务商预设
+│   │   │   └── utils.ts     # 通用工具函数
+│   │   ├── App.svelte       # 主应用组件（路由）
 │   │   ├── main.ts          # 应用入口
 │   │   └── app.css          # 全局样式
 │   └── shared/              # 共享类型定义
-│       └── types.ts
+│       └── types.ts         # TypeScript 类型
 ├── docs/                    # 文档
 │   ├── DEPLOYMENT.md
 │   └── USAGE.md
 ├── plans/                   # 计划文档
 │   ├── hexo-blog-manager-plan.md
 │   └── image-upload-s3.md
-├── public/                  # 静态资源
+├── public/                  # 静态资源（PWA 图标）
 │   ├── favicon.ico
 │   ├── pwa-64x64.png
 │   ├── pwa-192x192.png
 │   └── pwa-512x512.png
 ├── wrangler.toml            # Cloudflare Workers 配置
-├── vite.config.ts           # Vite 配置
+├── vite.config.ts           # Vite 配置（含 PWA）
 ├── package.json             # 项目依赖
 ├── tsconfig.json            # TypeScript 配置
 ├── tailwind.config.js       # Tailwind CSS 配置
 ├── README.md                # 项目说明
 ├── CHANGELOG.md             # 更新日志
-└── LICENSE                  # 许可证
+└── LICENSE                  # MIT 许可证
 ```
 
 ## 🔌 API 文档
 
 ### 认证
 
-- `GET /auth/github` - 获取 GitHub OAuth 授权 URL
-- `GET /auth/callback` - OAuth 回调处理
-- `GET /auth/user` - 获取当前用户信息
-- `POST /auth/logout` - 登出
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/auth/github` | 获取 GitHub OAuth 授权 URL |
+| GET | `/auth/callback` | OAuth 回调处理 |
+| GET | `/auth/user` | 获取当前用户信息 |
+| POST | `/auth/logout` | 登出 |
 
 ### 文章管理
 
-- `GET /api/posts` - 获取文章列表
-- `GET /api/posts/:path` - 获取文章详情
-- `POST /api/posts` - 创建新文章
-- `PUT /api/posts/:path` - 更新文章
-- `DELETE /api/posts/:path` - 删除文章
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/posts` | 获取文章列表 |
+| GET | `/api/posts/:path` | 获取文章详情 |
+| POST | `/api/posts` | 创建新文章 |
+| PUT | `/api/posts/:path` | 更新文章 |
+| DELETE | `/api/posts/:path` | 删除文章 |
 
 ### 仓库管理
 
-- `GET /api/repo` - 获取仓库信息
-- `GET /api/repo/branches` - 获取分支列表
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/repo` | 获取仓库信息 |
+| GET | `/api/repo/branches` | 获取分支列表 |
 
 ### 图片上传
 
-- `POST /api/upload` - 上传图片到 S3 存储
-- `POST /api/upload/delete` - 删除 S3 存储中的图片
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/upload` | 上传图片到 S3 存储 |
+| POST | `/api/upload/delete` | 删除 S3 存储中的图片 |
 
 ## ⚙️ 环境变量
 
@@ -312,7 +333,6 @@ blogwriter/
 | `GITHUB_CLIENT_ID` | GitHub OAuth App Client ID | 是 |
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth App Client Secret | 是 |
 | `GITHUB_REDIRECT_URI` | OAuth 回调 URL | 是 |
-| `SESSION_KV_ID` | KV Namespace ID | 是 |
 
 ### S3 配置（用户级）
 
@@ -361,6 +381,7 @@ blogwriter/
 - [Ace Editor](https://ace.c9.io/) - 强大的代码编辑器
 - [Tailwind CSS](https://tailwindcss.com/) - 实用优先的 CSS 框架
 - [Hexo](https://hexo.io/) - 快速、简洁且高效的博客框架
+- [marked.js](https://marked.js.org/) - Markdown 解析器
 
 ## 📞 支持
 
@@ -378,7 +399,7 @@ blogwriter/
 
 <div align="center">
 
-Made with ❤️ by [Your Name]
+Made with ❤️ for Hexo bloggers
 
 [⬆ 回到顶部](#hexo-博客管理器)
 
