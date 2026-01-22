@@ -35,9 +35,14 @@
   
   // 移动端快捷键栏相关状态
   let isMobile = false;
+  let isIOS = false;
   let showShortcutBar = false;
   let keyboardHeight = 0;
   let viewportOffsetTop = 0;
+  
+  // iOS 粘贴辅助元素
+  let pasteHelperInput: HTMLInputElement;
+  let fileInput: HTMLInputElement;
   
   // 触摸滑动检测
   let touchStartX = 0;
@@ -51,9 +56,11 @@
     console.log('[MarkdownEditor] content:', content);
     console.log('[MarkdownEditor] readonly:', readonly);
 
-    // 检测移动端
+    // 检测移动端和 iOS
     isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
       || ('ontouchstart' in window);
+    isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPad with iPadOS
     
     // 初始化 Ace Editor
     editor = ace.edit(editorContainer);
@@ -266,6 +273,12 @@
   async function handleShortcutPaste() {
     if (!editor) return;
     
+    // iOS 设备使用特殊的粘贴方法
+    if (isIOS) {
+      handleIOSPaste();
+      return;
+    }
+    
     // 保持编辑器焦点
     editor.focus();
     
@@ -308,6 +321,82 @@
       } catch (textError) {
         console.log('[MarkdownEditor] Clipboard readText also failed:', textError);
       }
+    }
+  }
+  
+  // iOS 专用粘贴处理 - 使用隐藏的 contenteditable 元素
+  function handleIOSPaste() {
+    if (!pasteHelperInput) return;
+    
+    // 聚焦到隐藏的输入框，触发系统粘贴
+    pasteHelperInput.value = '';
+    pasteHelperInput.focus();
+    
+    // 执行粘贴命令
+    document.execCommand('paste');
+    
+    // 延迟检查粘贴结果
+    setTimeout(() => {
+      const text = pasteHelperInput.value;
+      if (text && editor) {
+        editor.focus();
+        editor.insert(text);
+        if (onChange) {
+          const newContent = editor.getValue();
+          lastExternalContent = newContent;
+          onChange(newContent);
+        }
+      } else {
+        // 如果没有文本，恢复编辑器焦点
+        editor?.focus();
+      }
+      pasteHelperInput.value = '';
+    }, 100);
+  }
+  
+  // iOS 隐藏输入框的粘贴事件处理
+  function handlePasteHelperPaste(event: ClipboardEvent) {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    
+    for (const item of items) {
+      if (item.type.startsWith('image/') && onImageUpload) {
+        event.preventDefault();
+        event.stopPropagation();
+        const blob = item.getAsFile();
+        if (blob) {
+          // 恢复编辑器焦点
+          editor?.focus();
+          uploadAndInsert(blob);
+        }
+        return;
+      }
+    }
+    
+    // 如果是文本，让默认行为处理，然后在 handleIOSPaste 的 setTimeout 中读取
+  }
+  
+  // 处理文件选择（图片选择器）
+  function handleFileSelect(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const files = input.files;
+    if (!files || !onImageUpload) return;
+    
+    for (const file of files) {
+      if (file.type.startsWith('image/')) {
+        uploadAndInsert(file);
+        break;
+      }
+    }
+    
+    // 清空 input 以便可以再次选择同一文件
+    input.value = '';
+  }
+  
+  // 打开图片选择器
+  function openImagePicker() {
+    if (fileInput) {
+      fileInput.click();
     }
   }
 
@@ -683,6 +772,29 @@
   {/if}
 </div>
 
+<!-- iOS 粘贴辅助元素 -->
+{#if isIOS}
+  <input
+    bind:this={pasteHelperInput}
+    type="text"
+    class="paste-helper-input"
+    on:paste={handlePasteHelperPaste}
+    aria-hidden="true"
+    tabindex="-1"
+  />
+{/if}
+
+<!-- 隐藏的文件选择器 -->
+<input
+  bind:this={fileInput}
+  type="file"
+  accept="image/*"
+  class="file-input-hidden"
+  on:change={handleFileSelect}
+  aria-hidden="true"
+  tabindex="-1"
+/>
+
 <!-- 移动端快捷键栏 -->
 {#if isMobile && showShortcutBar}
   <div class="shortcut-bar" style="bottom: {keyboardHeight - viewportOffsetTop}px;">
@@ -702,6 +814,25 @@
           <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
         </svg>
       </button>
+      
+      <!-- iOS 图片选择按钮 -->
+      {#if isIOS && onImageUpload}
+        <button
+          class="shortcut-btn shortcut-btn-image"
+          on:click={openImagePicker}
+          on:mousedown|preventDefault
+          on:touchstart={handleTouchStart}
+          on:touchmove={handleTouchMove}
+          on:touchend={handleTouchEnd(openImagePicker)}
+          aria-label="选择图片"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+        </button>
+      {/if}
       
       <div class="shortcut-divider"></div>
       
@@ -1084,5 +1215,38 @@
     :global(.shortcut-bar) {
       padding-bottom: env(safe-area-inset-bottom);
     }
+  }
+
+  /* iOS 粘贴辅助输入框 - 完全隐藏 */
+  .paste-helper-input {
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* 隐藏的文件选择器 */
+  .file-input-hidden {
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* iOS 图片选择按钮样式 */
+  :global(.shortcut-btn-image) {
+    background: #10b981;
+    border-color: #10b981;
+    color: white;
+  }
+
+  :global(.shortcut-btn-image:active) {
+    background: #059669;
   }
 </style>
