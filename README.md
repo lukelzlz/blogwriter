@@ -387,7 +387,7 @@ blogwriter/
 
 如有问题，请：
 
-- 提交 [GitHub Issue](https://github.com/your-repo/issues)
+- 提交 [GitHub Issue](https://github.com/lukelzlz/blogwriter/issues)
 - 查看 [文档](docs/)
 - 联系维护者
 
