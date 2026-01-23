@@ -113,22 +113,14 @@ wrangler secret put GITHUB_CLIENT_SECRET
 VITE_API_BASE_URL=https://your-worker-domain.workers.dev
 ```
 
-## 第五步：构建项目
+## 第五步：部署
+
+### 5.1 部署 Worker（API 服务）
 
 ```bash
-npm run build
-```
-
-这会生成 `dist` 目录，包含编译后的前端文件。
-
-## 第六步：部署
-
-### 6.1 部署 Worker（API 服务）
-
-```bash
-npm run deploy:worker
-# 或
 wrangler deploy
+# 或
+npm run deploy:worker
 ```
 
 部署完成后，Wrangler 会显示您的 Workers 域名：
@@ -137,7 +129,15 @@ Published blogwriter (X.X sec)
   https://blogwriter.your-subdomain.workers.dev
 ```
 
-### 6.2 部署 Pages（前端）
+### 5.2 构建前端
+
+```bash
+npm run build
+```
+
+这会生成 `dist` 目录，包含编译后的前端文件。
+
+### 5.3 部署 Pages（前端）
 
 ```bash
 npm run deploy:pages
@@ -166,24 +166,24 @@ npm run deploy
    - 点击 "Custom domains"
    - 添加自定义域名（如 `writer.yourdomain.com`）
 
-## 第七步：更新配置
+## 第六步：更新配置
 
 配置自定义域名后，需要更新以下配置：
 
-### 7.1 更新 GitHub OAuth App
+### 6.1 更新 GitHub OAuth App
 
 回到 GitHub OAuth App 设置页面，更新：
 - **Homepage URL**: 前端域名
 - **Authorization callback URL**: API 域名 + `/auth/callback`
 
-### 7.2 更新 wrangler.toml
+### 6.2 更新 wrangler.toml
 
 ```toml
 [vars]
 GITHUB_REDIRECT_URI = "https://writer-api.yourdomain.com/auth/callback"
 ```
 
-### 7.3 更新 Worker 代码中的前端 URL
+### 6.3 更新 Worker 代码中的前端 URL
 
 在 `src/worker/auth.ts` 和 `src/worker/index.ts` 中更新前端 URL：
 
@@ -191,15 +191,15 @@ GITHUB_REDIRECT_URI = "https://writer-api.yourdomain.com/auth/callback"
 const frontendUrl = 'https://writer.yourdomain.com';
 ```
 
-### 7.4 重新部署
+### 6.4 重新部署
 
 ```bash
+wrangler deploy
 npm run build
-npm run deploy:worker
 npm run deploy:pages
 ```
 
-## 第八步：测试部署
+## 第七步：测试部署
 
 1. 访问您的前端域名
 2. 点击 "使用 GitHub 登录"
@@ -307,8 +307,8 @@ A: 尝试：
 
 ```bash
 # 修改代码后
+wrangler deploy
 npm run build
-npm run deploy:worker
 npm run deploy:pages
 ```
 
@@ -320,7 +320,7 @@ wrangler secret put GITHUB_CLIENT_SECRET
 
 # 更新 wrangler.toml 中的配置
 # 然后重新部署
-npm run deploy:worker
+wrangler deploy
 ```
 
 ## 监控和日志

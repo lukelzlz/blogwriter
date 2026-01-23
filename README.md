@@ -167,12 +167,6 @@ npm run wrangler:dev
 
 访问 `http://localhost:5173` 查看前端。
 
-### 构建
-
-```bash
-npm run build
-```
-
 ### 部署
 
 ```bash
@@ -180,14 +174,31 @@ npm run build
 npx wrangler login
 
 # 部署 Worker（API 服务）
+wrangler deploy
+# 或
 npm run deploy:worker
+
+# 构建前端
+npm run build
 
 # 部署 Pages（前端）
 npm run deploy:pages
-
-# 或一键部署前端
+# 或
 npm run deploy
 ```
+
+### 快速部署
+
+使用项目提供的部署脚本一键完成所有部署步骤：
+
+```bash
+bash builddeploy.sh
+```
+
+该脚本会按顺序执行：
+1. 部署 Worker（API 服务）
+2. 构建前端
+3. 部署 Pages（前端）
 
 ## 📚 文档
 

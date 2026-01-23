@@ -363,8 +363,20 @@ npx wrangler kv:namespace create SESSIONS
 
 # 更新 wrangler.toml 中的 KV ID
 
-# 部署到 Cloudflare Workers
-npx wrangler deploy
+# 部署到 Cloudflare Workers（API 服务）
+wrangler deploy
+
+# 构建前端
+npm run build
+
+# 部署到 Cloudflare Pages（前端）
+npm run deploy:pages
+```
+
+### 快速部署
+使用项目提供的部署脚本一键完成所有部署步骤：
+```bash
+bash builddeploy.sh
 ```
 
 ## 后续扩展功能
