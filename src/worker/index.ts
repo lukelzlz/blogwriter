@@ -17,7 +17,7 @@ export default {
 
     // 获取请求的来源
     const origin = request.headers.get('Origin');
-    
+
     // 允许的来源列表
     const allowedOrigins = [
       'https://writer.qwqc.cc',
@@ -27,31 +27,29 @@ export default {
       'http://127.0.0.1:5173',
       'http://127.0.0.1:3000',
     ];
-    
+
     // 验证来源是否在允许列表中
     const isAllowedOrigin = origin && allowedOrigins.includes(origin);
-    
-    // CORS headers - 使用动态的 Origin
-    const corsHeaders: Record<string, string> = {
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Max-Age': '86400',
-    };
-    
-    // 只有当来源在允许列表中时才设置 Access-Control-Allow-Origin
+
+    // CORS headers - 只有当来源被允许时才设置
+    const corsHeaders: Record<string, string> = {};
     if (isAllowedOrigin) {
       corsHeaders['Access-Control-Allow-Origin'] = origin;
+      corsHeaders['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+      corsHeaders['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
+      corsHeaders['Access-Control-Max-Age'] = '86400';
     }
-    
-    // 如果需要支持凭证（cookies），添加以下头
-    // corsHeaders['Access-Control-Allow-Credentials'] = 'true';
 
     // Handle CORS preflight requests
     if (request.method === 'OPTIONS') {
-      return new Response(null, { 
-        status: 204,
-        headers: corsHeaders 
-      });
+      if (isAllowedOrigin) {
+        return new Response(null, {
+          status: 204,
+          headers: corsHeaders
+        });
+      }
+      // 如果 origin 不被允许，返回 403
+      return new Response('Origin not allowed', { status: 403 });
     }
 
     try {

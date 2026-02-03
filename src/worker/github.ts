@@ -98,31 +98,24 @@ export async function getFileContent(
     url.searchParams.set('ref', branch);
   }
 
-  console.log('[DEBUG] getFileContent - original path:', path);
-  console.log('[DEBUG] getFileContent - encoded path:', encodedPath);
-  console.log('[DEBUG] getFileContent - full URL:', url.toString());
-
   const response = await fetch(url.toString(), {
     headers: {
-      // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
+      // GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
       'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
-      // 🔧 修复：GitHub API 要求必须包含 User-Agent header
+      // GitHub API 要求必须包含 User-Agent header
       'User-Agent': 'BlogWriter/1.0',
     },
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[DEBUG] getFileContent error response:', errorText);
-    console.error('[DEBUG] getFileContent error status:', response.status);
     throw new Error('Failed to fetch file content');
   }
 
   const data: any = await response.json();
 
   // Base64 解码（使用 UTF-8 编码）
-  // 使用 TextDecoder 处理 Unicode 字符（替代已弃用的 escape/unescape）
+  // 使用 TextDecoder 处理 Unicode 字符
   const binaryString = atob(data.content.replace(/\s/g, ''));
   const bytes = Uint8Array.from(binaryString, (char) => char.charCodeAt(0));
   const content = new TextDecoder('utf-8').decode(bytes);
@@ -144,18 +137,7 @@ export async function createOrUpdateFile(
   sha?: string,
   branch?: string
 ): Promise<{ content: GitHubFile; commit: { sha: string } }> {
-  console.log('[DEBUG] createOrUpdateFile called with:', {
-    owner,
-    repo,
-    path,
-    contentLength: content?.length,
-    message,
-    hasSha: !!sha,
-    sha: sha?.substring(0, 10) + '...',
-    branch,
-  });
-
-  // 使用 TextEncoder 编码包含 Unicode 字符的内容（替代已弃用的 unescape/encodeURIComponent）
+  // 使用 TextEncoder 编码包含 Unicode 字符的内容
   const encoder = new TextEncoder();
   const bytes = encoder.encode(content);
   const binaryString = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
@@ -174,34 +156,22 @@ export async function createOrUpdateFile(
 
   // 对文件路径进行 URL 编码（只编码各个部分，保留 /）
   const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodePathForGitHub(path)}`;
-  console.log('[DEBUG] createOrUpdateFile URL:', url);
-  console.log('[DEBUG] createOrUpdateFile body (partial):', {
-    message: body.message,
-    contentLength: body.content.length,
-    hasSha: !!body.sha,
-    branch: body.branch,
-  });
 
   const response = await fetch(url, {
     method: 'PUT',
     headers: {
-      // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
+      // GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
       'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      // 🔧 修复：GitHub API 要求必须包含 User-Agent header
+      // GitHub API 要求必须包含 User-Agent header
       'User-Agent': 'BlogWriter/1.0',
     },
     body: JSON.stringify(body),
   });
 
-  console.log('[DEBUG] createOrUpdateFile response status:', response.status);
-
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('[DEBUG] createOrUpdateFile error response:', errorText);
-    console.error('[DEBUG] createOrUpdateFile error status:', response.status);
-
     let error;
     try {
       error = JSON.parse(errorText);
@@ -212,9 +182,7 @@ export async function createOrUpdateFile(
     throw new Error(`Failed to create/update file: ${error.message || errorText}`);
   }
 
-  const result = await response.json() as { content: GitHubFile; commit: { sha: string } };
-  console.log('[DEBUG] createOrUpdateFile result:', result);
-  return result;
+  return await response.json() as { content: GitHubFile; commit: { sha: string } };
 }
 
 // 删除文件
@@ -242,21 +210,18 @@ export async function deleteFile(
   const response = await fetch(url, {
     method: 'DELETE',
     headers: {
-      // 🔧 修复：GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
+      // GitHub OAuth access_token 需要使用 'token' 前缀而不是 'Bearer'
       'Authorization': `token ${accessToken}`,
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      // 🔧 修复：GitHub API 要求必须包含 User-Agent header
+      // GitHub API 要求必须包含 User-Agent header
       'User-Agent': 'BlogWriter/1.0',
     },
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[DEBUG] deleteFile error response:', errorText);
-    console.error('[DEBUG] deleteFile error status:', response.status);
-    throw new Error(`Failed to delete file: ${errorText}`);
+    throw new Error(`Failed to delete file: ${await response.text()}`);
   }
 
   return response.json();
@@ -266,7 +231,7 @@ export async function deleteFile(
 export async function handleRepo(
   request: Request,
   env: Env,
-  ctx: any,
+  _ctx: any,
   corsHeaders: HeadersInit
 ): Promise<Response> {
   const url = new URL(request.url);

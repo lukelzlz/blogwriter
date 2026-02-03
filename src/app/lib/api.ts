@@ -28,34 +28,30 @@ async function handleSessionExpired(): Promise<void> {
   if (isReauthenticating) {
     return;
   }
-  
+
   isReauthenticating = true;
-  console.log('🔄 [Session] 会话已过期，正在清除本地会话并重新认证...');
-  
+
   try {
     // 清除本地会话
     auth.clearSession();
-    
+
     // 获取 GitHub OAuth URL 并重定向
     const response = await fetch(`${API_BASE_URL}/auth/github`, {
       headers: { 'Content-Type': 'application/json' },
     });
-    
+
     if (response.ok) {
-      const data = await response.json();
+      const data: { url?: string; data?: { url?: string } } = await response.json();
       const authUrl = data.url || data.data?.url;
       if (authUrl) {
-        console.log('🔄 [Session] 重定向到 GitHub 进行重新认证...');
         window.location.href = authUrl;
         return;
       }
     }
-    
+
     // 如果获取 OAuth URL 失败，重定向到登录页面
-    console.log('🔄 [Session] 无法获取 OAuth URL，重定向到登录页面...');
     window.location.href = '/login';
   } catch (error) {
-    console.error('❌ [Session] 重新认证失败:', error);
     // 重定向到登录页面
     window.location.href = '/login';
   } finally {
@@ -78,18 +74,18 @@ async function request<T>(
       },
     });
 
-    const data = await response.json();
+    const data: { error?: string; data?: T; [key: string]: unknown } = await response.json();
 
     if (!response.ok) {
       // 检测会话过期错误（401 状态码且错误信息包含 session 相关内容）
       if (response.status === 401 &&
           (data.error === 'Invalid or expired session' ||
            data.error === 'No session provided' ||
-           data.error?.toLowerCase().includes('session'))) {
+           (data.error && typeof data.error === 'string' && data.error.toLowerCase().includes('session')))) {
         // 异步处理会话过期，不阻塞当前请求返回
         handleSessionExpired();
       }
-      
+
       return {
         success: false,
         error: data.error || 'Request failed',
@@ -98,7 +94,7 @@ async function request<T>(
 
     // 自动解包后端返回的 { data: ... } 结构
     // 后端统一返回 { data: T } 格式，这里解包为 T
-    const unwrappedData = data.data !== undefined ? data.data : data;
+    const unwrappedData = data.data !== undefined ? data.data as T : data as T;
 
     return {
       success: true,
@@ -170,17 +166,12 @@ export const postsApi = {
 
   // 更新文章
   async update(path: string, params: UpdatePostParams, branch?: string, owner?: string, repo?: string) {
-    console.log('[DEBUG] postsApi.update called with:', { path, params, branch, owner, repo });
-
     const queryParams = new URLSearchParams();
     if (branch) queryParams.set('branch', branch);
     if (owner) queryParams.set('owner', owner);
     if (repo) queryParams.set('repo', repo);
 
     const url = `/api/posts/${encodePathForUrl(path)}?${queryParams.toString()}`;
-    console.log('[DEBUG] Request URL:', url);
-    console.log('[DEBUG] Request body:', JSON.stringify(params));
-
     return request<Post>(url, {
       method: 'PUT',
       body: JSON.stringify(params),

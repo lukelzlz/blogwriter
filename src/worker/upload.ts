@@ -1,8 +1,6 @@
 import type { S3Config, ImageUploadParams, ImageUploadResponse } from '../shared/types';
-
-interface Env {
-  SESSIONS: KVNamespace;
-}
+import { validateSession } from './auth';
+import type { Env } from './index';
 
 // 生成唯一文件名
 function generateFileName(mimeType: string, pathPrefix: string): string {
@@ -38,7 +36,7 @@ async function sha256(data: string | ArrayBuffer): Promise<ArrayBuffer> {
 // 计算 HMAC-SHA256
 async function hmacSha256(key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayBuffer> {
   const encoder = new TextEncoder();
-  const keyBuffer = key instanceof Uint8Array ? key.buffer : key;
+  const keyBuffer = key instanceof Uint8Array ? key.buffer.slice(key.byteOffset, key.byteOffset + key.byteLength) : key;
   const cryptoKey = await crypto.subtle.importKey(
     'raw',
     keyBuffer,
@@ -314,7 +312,7 @@ async function uploadToS3(
 export async function handleUpload(
   request: Request,
   env: Env,
-  ctx: ExecutionContext,
+  _ctx: ExecutionContext,
   corsHeaders: Record<string, string>
 ): Promise<Response> {
   // 只允许 POST 请求
@@ -324,7 +322,24 @@ export async function handleUpload(
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   }
-  
+
+  // 验证会话 - 防止未授权访问
+  const sessionId = request.headers.get('Authorization')?.replace('Bearer ', '');
+  if (!sessionId) {
+    return new Response(JSON.stringify({ error: 'Authentication required' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+
+  const session = await validateSession(env, sessionId);
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'Invalid or expired session' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+
   try {
     // 解析请求体
     const body = await request.json() as ImageUploadParams;
@@ -424,7 +439,7 @@ interface ImageDeleteParams {
 export async function handleDelete(
   request: Request,
   env: Env,
-  ctx: ExecutionContext,
+  _ctx: ExecutionContext,
   corsHeaders: Record<string, string>
 ): Promise<Response> {
   // 只允许 DELETE 或 POST 请求
@@ -434,7 +449,24 @@ export async function handleDelete(
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   }
-  
+
+  // 验证会话 - 防止未授权访问
+  const sessionId = request.headers.get('Authorization')?.replace('Bearer ', '');
+  if (!sessionId) {
+    return new Response(JSON.stringify({ error: 'Authentication required' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+
+  const session = await validateSession(env, sessionId);
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'Invalid or expired session' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+
   try {
     // 解析请求体
     const body = await request.json() as ImageDeleteParams;

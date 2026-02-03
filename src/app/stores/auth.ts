@@ -25,21 +25,13 @@ function createAuthStore() {
 
   // 从 localStorage 恢复会话
   function restoreSession() {
-    console.log('🔍 [Auth Store Debug] restoreSession() 被调用');
     const sessionId = localStorage.getItem('sessionId');
     const userJson = localStorage.getItem('user');
     const repoJson = localStorage.getItem('repo');
     const postsPath = localStorage.getItem('postsPath') || 'source/_posts';
     const s3ConfigJson = localStorage.getItem('s3Config');
 
-    console.log('  - sessionId:', sessionId);
-    console.log('  - userJson:', userJson);
-    console.log('  - repoJson:', repoJson);
-    console.log('  - postsPath:', postsPath);
-    console.log('  - s3Config:', s3ConfigJson ? '已配置' : '未配置');
-
     if (sessionId && userJson) {
-      console.log('✅ [Auth Store Debug] sessionId 和 user 都存在，恢复会话');
       update((state) => ({
         ...state,
         isAuthenticated: true,
@@ -50,9 +42,6 @@ function createAuthStore() {
         s3Config: s3ConfigJson ? JSON.parse(s3ConfigJson) : null,
       }));
     } else {
-      console.log('❌ [Auth Store Debug] 无法恢复会话:');
-      if (!sessionId) console.log('  - 缺少 sessionId');
-      if (!userJson) console.log('  - 缺少 userJson');
       // 即使未登录也恢复 S3 配置
       if (s3ConfigJson) {
         update((state) => ({

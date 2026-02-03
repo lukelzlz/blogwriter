@@ -16,38 +16,30 @@ export async function getPosts(
   path: string = '_posts',
   branch?: string
 ): Promise<Post[]> {
-  console.log('[DEBUG] getPosts called with:', { owner, repo, path, branch });
-
   const files = await getDirectoryContents(owner, repo, path, accessToken, branch);
-
-  console.log('[DEBUG] Files from GitHub API:', files);
-  console.log('[DEBUG] Total files count:', files.length);
 
   // 过滤出 Markdown 文件
   const markdownFiles = files.filter((file) =>
     file.type === 'file' && file.name.endsWith('.md')
   );
 
-  console.log('[DEBUG] Markdown files count:', markdownFiles.length);
-  console.log('[DEBUG] Markdown files:', markdownFiles.map(f => ({ name: f.name, path: f.path })));
-
   // 获取每个文件的内容并解析 front-matter
   const postsWithFrontMatter = await Promise.all(
     markdownFiles.map(async (file) => {
       try {
         const { content, sha } = await getFileContent(owner, repo, file.path, accessToken, branch);
-        
+
         // 解析 front-matter（支持 \r\n 和 \n 换行符）
         const frontMatterRegex = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
         const match = content.match(frontMatterRegex);
-        
+
         let frontMatter = undefined;
         if (match) {
           const frontMatterText = match[1];
           // 支持引号包裹的标题
           const titleMatch = frontMatterText.match(/^title:\s*["']?(.+?)["']?\s*$/m);
           const dateMatch = frontMatterText.match(/^date:\s*(.+)$/m);
-          
+
           // 只有当 title 和 date 都存在时才设置 frontMatter
           if (titleMatch && dateMatch) {
             frontMatter = {
@@ -56,7 +48,7 @@ export async function getPosts(
             };
           }
         }
-        
+
         return {
           path: file.path,
           name: file.name,
@@ -200,8 +192,6 @@ export async function updatePost(
 ): Promise<Post> {
   const { path, content, sha } = params;
 
-  console.log('[DEBUG] updatePost called with:', { owner, repo, path, contentLength: content?.length, sha, branch });
-
   // 提交到 GitHub
   const result = await createOrUpdateFile(
     owner,
@@ -213,8 +203,6 @@ export async function updatePost(
     sha,
     branch
   );
-
-  console.log('[DEBUG] updatePost result:', result);
 
   // 解析 front-matter（支持 \r\n 和 \n 换行符）
   const frontMatterRegex = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
@@ -270,7 +258,7 @@ export async function deletePost(
 export async function handlePosts(
   request: Request,
   env: Env,
-  ctx: any,
+  _ctx: any,
   corsHeaders: HeadersInit
 ): Promise<Response> {
   const url = new URL(request.url);
@@ -378,16 +366,7 @@ export async function handlePosts(
     try {
       const params: UpdatePostParams = await request.json();
 
-      console.log('[DEBUG] PUT /api/posts/:path - postPath:', postPath);
-      console.log('[DEBUG] PUT /api/posts/:path - params:', params);
-      console.log('[DEBUG] PUT /api/posts/:path - params.content:', params.content);
-      console.log('[DEBUG] PUT /api/posts/:path - params.sha:', params.sha);
-
       if (!params.content || !params.sha) {
-        console.error('[DEBUG] Missing required params:', {
-          content: params.content,
-          sha: params.sha,
-        });
         return new Response(JSON.stringify({ error: 'Content and sha are required' }), {
           status: 400,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -413,9 +392,6 @@ export async function handlePosts(
     // 对路径进行解码，因为 URL 中的路径已经被浏览器编码
     const postPath = decodeURIComponent(path.substring('/api/posts/'.length));
     const sha = url.searchParams.get('sha');
-
-    console.log('[DEBUG] DELETE /api/posts/:path - postPath:', postPath);
-    console.log('[DEBUG] DELETE /api/posts/:path - sha:', sha);
 
     if (!sha) {
       return new Response(JSON.stringify({ error: 'SHA is required' }), {
