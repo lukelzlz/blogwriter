@@ -38,10 +38,10 @@ function createAuthStore() {
     const repoJson = localStorage.getItem('repo');
     const postsPath = localStorage.getItem('postsPath') || 'source/_posts';
     const s3ConfigJson = localStorage.getItem('s3Config');
-    const provider = (localStorage.getItem('imageStorageProvider') as ImageStorageProvider) || 'github';
+    const s3Config = s3ConfigJson ? JSON.parse(s3ConfigJson) : null;
+    const provider = (localStorage.getItem('imageStorageProvider') as ImageStorageProvider) || (s3Config ? 's3' : 'github');
     const githubImageConfigJson = localStorage.getItem('githubImageConfig');
 
-    const s3Config = s3ConfigJson ? JSON.parse(s3ConfigJson) : null;
     const githubImageConfig = githubImageConfigJson ? JSON.parse(githubImageConfigJson) : DEFAULT_GITHUB_IMAGE_CONFIG;
     const repo = repoJson ? JSON.parse(repoJson) : null;
 
@@ -86,8 +86,9 @@ function createAuthStore() {
     const savedPostsPath = localStorage.getItem('postsPath') || 'source/_posts';
     const savedS3ConfigJson = localStorage.getItem('s3Config');
     const savedS3Config = savedS3ConfigJson ? JSON.parse(savedS3ConfigJson) : null;
-    const savedProvider = (localStorage.getItem('imageStorageProvider') as ImageStorageProvider) || 'github';
+    const savedProvider = (localStorage.getItem('imageStorageProvider') as ImageStorageProvider) || (savedS3Config ? 's3' : 'github');
     const savedGhConfigJson = localStorage.getItem('githubImageConfig');
+
     const savedGhConfig = savedGhConfigJson ? JSON.parse(savedGhConfigJson) : DEFAULT_GITHUB_IMAGE_CONFIG;
 
     update((state) => ({

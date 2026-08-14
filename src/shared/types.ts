@@ -117,6 +117,8 @@ export type ImageStorageProvider = 'github' | 's3';
 
 // GitHub 仓库图床配置
 export interface GitHubImageConfig {
+  owner?: string;             // 仓库所有者
+  repo?: string;              // 仓库名称
   pathPrefix?: string;        // 存储路径前缀，默认 'source/images'
   branch?: string;            // 目标分支，默认仓库默认分支
 }
@@ -142,6 +144,8 @@ export interface ImageDeleteParams {
   key: string;                          // 存储 key 或文件路径
   provider?: ImageStorageProvider;       // 图床服务商类型
   config?: S3Config;                    // S3 配置
+  githubConfig?: GitHubImageConfig;     // GitHub 配置
   sha?: string;                         // GitHub file sha
 }
+
 

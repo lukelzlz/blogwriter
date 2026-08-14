@@ -398,14 +398,16 @@ export async function handleUpload(
 
     // 处理 GitHub 仓库图床上传
     if (provider === 'github') {
-      if (!session.repo) {
-        return new Response(JSON.stringify({ error: '未绑定 GitHub 博客仓库，请在设置中选择仓库' }), {
+      const owner = githubConfig?.owner || session.repo?.owner || session.user?.login;
+      const repo = githubConfig?.repo || session.repo?.name;
+
+      if (!owner || !repo) {
+        return new Response(JSON.stringify({ error: '未指定 GitHub 博客仓库，请在设置中选择仓库' }), {
           status: 400,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
       }
 
-      const { owner, name: repo } = session.repo;
       const pathPrefix = githubConfig?.pathPrefix || 'source/images';
       const branch = githubConfig?.branch;
 
@@ -548,8 +550,9 @@ export async function handleDelete(
   try {
     // 解析请求体
     const body = await request.json() as ImageDeleteParams;
-    const { key, config, sha } = body;
+    const { key, config, sha, githubConfig } = body;
     const provider = body.provider || (config ? 's3' : 'github');
+
     
     // 验证必要参数
     if (!key) {
@@ -561,14 +564,16 @@ export async function handleDelete(
 
     // 处理 GitHub 删除
     if (provider === 'github') {
-      if (!session.repo) {
-        return new Response(JSON.stringify({ error: '未绑定 GitHub 博客仓库' }), {
+      const owner = githubConfig?.owner || session.repo?.owner || session.user?.login;
+      const repo = githubConfig?.repo || session.repo?.name;
+
+      if (!owner || !repo) {
+        return new Response(JSON.stringify({ error: '未指定 GitHub 博客仓库' }), {
           status: 400,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
       }
 
-      const { owner, name: repo } = session.repo;
       const filePath = key;
       let fileSha = sha;
 

@@ -262,8 +262,8 @@
 
   // 图片上传处理
   async function handleImageUpload(file: Blob, onProgress?: (progress: number) => void): Promise<{ url: string; key: string; sha?: string } | null> {
-    const provider = $auth.imageStorageProvider || 'github';
     const s3Config = $auth.s3Config;
+    const provider = $auth.imageStorageProvider || (s3Config ? 's3' : 'github');
     const githubConfig = $auth.githubImageConfig;
 
     if (provider === 'github' && !$auth.repo) {
@@ -295,7 +295,11 @@
         mimeType: file.type || 'image/png',
         provider,
         config: provider === 's3' ? s3Config! : undefined,
-        githubConfig: provider === 'github' ? githubConfig : undefined,
+        githubConfig: provider === 'github' ? {
+          ...githubConfig,
+          owner: $auth.repo?.owner || $auth.user?.login,
+          repo: $auth.repo?.name,
+        } : undefined,
       }, onProgress);
 
       if (response.success && response.data) {
@@ -307,21 +311,25 @@
       }
     } catch (err) {
       console.error('Image upload error:', err);
-      alert('图片上传失败');
+      alert('图片上传失败: ' + (err instanceof Error ? err.message : '网络异常'));
       return null;
     }
   }
 
   // 图片删除处理
   async function handleImageDelete(key: string, sha?: string): Promise<boolean> {
-    const provider = $auth.imageStorageProvider || 'github';
     const s3Config = $auth.s3Config;
+    const provider = $auth.imageStorageProvider || (s3Config ? 's3' : 'github');
 
     try {
       const response = await imageApi.delete({
         key,
         provider,
         config: provider === 's3' ? (s3Config || undefined) : undefined,
+        githubConfig: provider === 'github' ? {
+          owner: $auth.repo?.owner || $auth.user?.login,
+          repo: $auth.repo?.name,
+        } : undefined,
         sha,
       });
       return response.success;

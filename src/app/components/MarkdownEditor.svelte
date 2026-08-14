@@ -110,8 +110,11 @@
       }
     });
 
-    // 监听粘贴事件
-    editor.container.addEventListener('paste', handlePaste);
+    // 监听粘贴事件（捕获阶段，确保在 Ace 内部处理前拦截图片粘贴）
+    editor.container.addEventListener('paste', handlePaste, true);
+    if (editor.textInput && editor.textInput.getElement()) {
+      editor.textInput.getElement().addEventListener('paste', handlePaste, true);
+    }
     
     // 监听移动端 Paste 按钮点击（Ace Editor 移动端会显示 Paste 按钮）
     editor.container.addEventListener('click', handleMobilePasteClick);
@@ -132,7 +135,10 @@
 
     return () => {
       if (editor) {
-        editor.container.removeEventListener('paste', handlePaste);
+        editor.container.removeEventListener('paste', handlePaste, true);
+        if (editor.textInput && editor.textInput.getElement()) {
+          editor.textInput.getElement().removeEventListener('paste', handlePaste, true);
+        }
         editor.container.removeEventListener('click', handleMobilePasteClick);
         editor.destroy();
       }
@@ -142,6 +148,7 @@
       }
     };
   });
+
   
   // 处理编辑器获得焦点
   function handleEditorFocus() {
@@ -408,21 +415,38 @@
 
   // 粘贴事件处理
   function handlePaste(event: ClipboardEvent) {
+    if (!onImageUpload) return;
+    
     const items = event.clipboardData?.items;
-    if (!items || !onImageUpload) return;
-
-    for (const item of items) {
-      if (item.type.startsWith('image/')) {
-        event.preventDefault();
-        event.stopPropagation();
-        const blob = item.getAsFile();
-        if (blob) {
-          uploadAndInsert(blob);
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type && item.type.startsWith('image/')) {
+          event.preventDefault();
+          event.stopPropagation();
+          const blob = item.getAsFile();
+          if (blob) {
+            uploadAndInsert(blob);
+          }
+          return;
         }
-        break;
+      }
+    }
+
+    const files = event.clipboardData?.files;
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.type && file.type.startsWith('image/')) {
+          event.preventDefault();
+          event.stopPropagation();
+          uploadAndInsert(file);
+          return;
+        }
       }
     }
   }
+
 
   // 移动端 Paste 按钮点击处理
   function handleMobilePasteClick(event: MouseEvent) {
