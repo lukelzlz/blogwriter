@@ -64,7 +64,6 @@
 
   // 键盘快捷键
   async function handleKeydown(event: KeyboardEvent) {
-    // Ctrl/Cmd + S 保存
     if ((event.ctrlKey || event.metaKey) && event.key === 's') {
       event.preventDefault();
       await handleSave();
@@ -88,12 +87,10 @@
     }
 
     try {
-      // 将 Blob 转换为 Base64
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
           const result = reader.result as string;
-          // 移除 data URL 前缀，只保留 base64 数据
           const base64Data = result.split(',')[1];
           resolve(base64Data);
         };
@@ -153,71 +150,68 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div class="editor-page">
-  <div class="editor-container">
-    <!-- 工具栏 -->
-    <div class="toolbar bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-      <div class="flex items-center space-x-4 flex-1">
-        <input
-          type="text"
-          bind:value={$editor.title}
-          placeholder="文章标题"
-          class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-        />
-      </div>
-      <div class="flex items-center space-x-2">
-        {#if $editor.isDirty}
-          <span class="text-sm text-orange-600">未保存</span>
-        {/if}
-        {#if $editor.isSaving}
-          <span class="text-sm text-primary-600">保存中...</span>
-        {/if}
-        <button
-          on:click={handleSave}
-          disabled={$editor.isSaving}
-          class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          创建文章
-        </button>
-      </div>
+<div class="max-w-4xl mx-auto flex flex-col h-[calc(100vh-140px)] min-h-[500px]">
+  <!-- 顶部轻量工具操作栏 -->
+  <div class="flex items-center justify-between gap-3 pb-4 mb-4 border-b border-zinc-200/80">
+    <div class="flex items-center gap-2">
+      <button
+        on:click={() => navigate('/')}
+        class="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition py-1.5 px-2 rounded-md hover:bg-zinc-100"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        <span>返回</span>
+      </button>
+      <span class="text-zinc-300">/</span>
+      <span class="text-xs font-medium text-zinc-800">新建文章</span>
     </div>
 
-    <!-- 编辑器 -->
-    <div class="editor-content full-width">
-      <div class="editor-pane">
-        <MarkdownEditor
-          content={$editor.content}
-          onChange={(content) => editor.setContent(content)}
-          onImageUpload={($auth.imageStorageProvider === 'github' && $auth.repo) || ($auth.imageStorageProvider === 's3' && $auth.s3Config) ? handleImageUpload : undefined}
-          onImageDelete={($auth.imageStorageProvider === 'github' && $auth.repo) || ($auth.imageStorageProvider === 's3' && $auth.s3Config) ? handleImageDelete : undefined}
-        />
-      </div>
+    <div class="flex items-center gap-3">
+      {#if $editor.isDirty}
+        <span class="text-xs text-amber-600 font-medium flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+          <span>未保存草稿</span>
+        </span>
+      {/if}
+      {#if $editor.isSaving}
+        <span class="text-xs text-zinc-500 font-medium flex items-center gap-1.5">
+          <div class="loading !w-3 !h-3 !border-zinc-300 !border-t-zinc-900"></div>
+          <span>保存中...</span>
+        </span>
+      {/if}
+      <button
+        on:click={handleSave}
+        disabled={$editor.isSaving}
+        class="bg-zinc-900 hover:bg-black text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all shadow-sm hover:shadow active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <span>发布文章</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 沉浸式文稿白底纸质卡片 -->
+  <div class="flex-1 flex flex-col bg-white rounded-2xl border border-zinc-200/80 shadow-sm overflow-hidden p-4 sm:p-8">
+    <!-- 无边框大标题输入框 -->
+    <input
+      type="text"
+      bind:value={$editor.title}
+      placeholder="输入文章标题..."
+      class="w-full text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 placeholder:text-zinc-300 border-0 border-b border-zinc-100 pb-4 mb-4 focus:ring-0 focus:outline-none bg-transparent"
+    />
+
+    <!-- 编辑器区域 -->
+    <div class="flex-1 min-h-[350px]">
+      <MarkdownEditor
+        content={$editor.content}
+        placeholder="在这里开始书写 Markdown 正文，支持直接粘贴图片或拖拽图片上传..."
+        onChange={(content) => editor.setContent(content)}
+        onImageUpload={($auth.imageStorageProvider === 'github' && $auth.repo) || ($auth.imageStorageProvider === 's3' && $auth.s3Config) ? handleImageUpload : undefined}
+        onImageDelete={($auth.imageStorageProvider === 'github' && $auth.repo) || ($auth.imageStorageProvider === 's3' && $auth.s3Config) ? handleImageDelete : undefined}
+      />
     </div>
   </div>
 </div>
-
-<style>
-  .editor-page {
-    min-height: calc(100vh - 200px);
-  }
-
-  .editor-container {
-    background-color: #f9fafb;
-    border-radius: 0.5rem;
-    overflow: hidden;
-  }
-
-  .toolbar {
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    position: relative;
-  }
-
-  .editor-content {
-    display: block;
-    height: calc(100vh - 250px);
-  }
-
-  .editor-pane {
-    height: 100%;
-  }
-</style>

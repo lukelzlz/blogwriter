@@ -10,7 +10,7 @@
 
   let showDeleteConfirm: Post | null = null;
 
-  // 尝试解码文件名（处理 URL 编码的文件名）
+  // 尝试解码文件名
   function decodeFilename(filename: string): string {
     try {
       return decodeURIComponent(filename);
@@ -24,7 +24,6 @@
     if (post.frontMatter?.title) {
       return post.frontMatter.title;
     }
-    // 尝试解码文件名后再提取标题
     const decodedName = decodeFilename(post.name);
     return extractTitleFromFilename(decodedName);
   }
@@ -32,118 +31,105 @@
 
 <div class="post-list">
   {#if loading}
-    <div class="flex items-center justify-center py-12">
-      <div class="loading"></div>
-      <span class="ml-3">加载中...</span>
+    <div class="flex flex-col items-center justify-center py-20 text-zinc-400">
+      <div class="loading !w-6 !h-6 !border-zinc-300 !border-t-zinc-900 mb-3"></div>
+      <span class="text-xs font-medium tracking-wide text-zinc-500">正在同步文章列表...</span>
     </div>
   {:else if posts.length === 0}
-    <div class="text-center py-12 text-gray-500">
-      <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-        />
-      </svg>
-      <p>还没有文章</p>
-      <p class="text-sm mt-2">点击"新建文章"开始创作</p>
+    <div class="text-center py-20 bg-white rounded-2xl border border-zinc-200/80 p-8">
+      <div class="w-12 h-12 rounded-2xl bg-zinc-100 flex items-center justify-center mx-auto mb-4 text-zinc-400">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+        </svg>
+      </div>
+      <h3 class="text-base font-semibold text-zinc-900 mb-1">暂无文章</h3>
+      <p class="text-xs text-zinc-500 max-w-xs mx-auto">
+        当前仓库目录下尚未发现 Hexo 博文，点击右上角「新建文章」开始撰写第一篇内容。
+      </p>
     </div>
   {:else}
-    <div class="space-y-4">
+    <div class="divide-y divide-zinc-200/80 bg-white rounded-2xl border border-zinc-200/80 shadow-sm overflow-hidden">
       {#each posts as post (post.path)}
-        <div class="post-item bg-white rounded-lg shadow-sm hover:shadow-md transition p-4">
-          <div class="flex items-start justify-between">
-            <div class="flex-1 min-w-0">
-              <h3 class="text-lg font-semibold text-gray-900 truncate">
-                {getDisplayTitle(post)}
-              </h3>
-              <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-                <span class="flex items-center">
-                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                    />
+        <div class="group p-5 sm:p-6 hover:bg-zinc-50/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <!-- 文章主体信息 -->
+          <div class="flex-1 min-w-0 cursor-pointer" on:click={() => onEdit(post)} on:keydown={(e) => e.key === 'Enter' && onEdit(post)} role="button" tabindex="0">
+            <h2 class="text-base sm:text-lg font-semibold tracking-tight text-zinc-900 group-hover:text-zinc-950 transition">
+              {getDisplayTitle(post)}
+            </h2>
+            
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-zinc-500 font-normal">
+              {#if post.frontMatter?.date}
+                <span class="inline-flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  {post.name}
+                  <span>{formatDate(post.frontMatter.date)}</span>
                 </span>
-                <span class="flex items-center">
-                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                    />
-                  </svg>
-                  {formatFileSize(post.size)}
-                </span>
-                {#if post.frontMatter?.date}
-                  <span class="flex items-center">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                    {formatDate(post.frontMatter.date)}
-                  </span>
-                {/if}
-              </div>
+                <span class="text-zinc-300">·</span>
+              {/if}
+
+              <span class="inline-flex items-center gap-1 font-mono text-[11px] text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded">
+                {post.name}
+              </span>
+
+              <span class="text-zinc-300">·</span>
+
+              <span class="text-zinc-600 font-mono text-[11px]">
+                {formatFileSize(post.size)}
+              </span>
             </div>
-            <div class="flex items-center space-x-2 ml-4">
-              <button
-                on:click={() => onEdit(post)}
-                class="p-2 text-primary-600 hover:bg-primary-50 rounded-md transition"
-                title="编辑"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
-              </button>
-              <button
-                on:click={() => (showDeleteConfirm = post)}
-                class="p-2 text-red-600 hover:bg-red-50 rounded-md transition"
-                title="删除"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </button>
-            </div>
+          </div>
+
+          <!-- 操作按钮区 (移动端舒适热区) -->
+          <div class="flex items-center gap-1 self-end sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100 w-full sm:w-auto justify-end">
+            <button
+              on:click|stopPropagation={() => onEdit(post)}
+              class="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg text-xs font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 active:bg-zinc-200 transition"
+              title="编辑文章"
+              aria-label="编辑文章"
+            >
+              <svg class="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              <span>编辑</span>
+            </button>
+
+            <button
+              on:click|stopPropagation={() => (showDeleteConfirm = post)}
+              class="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg text-xs font-medium text-zinc-600 hover:text-red-600 hover:bg-red-50 active:bg-red-100 transition"
+              title="删除文章"
+              aria-label="删除文章"
+            >
+              <svg class="w-4 h-4 text-zinc-400 hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>删除</span>
+            </button>
           </div>
         </div>
       {/each}
     </div>
   {/if}
 
-  <!-- Delete Confirmation Modal -->
+  <!-- 极简删除确认 Modal -->
   {#if showDeleteConfirm}
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-        <h3 class="text-lg font-semibold mb-4">确认删除</h3>
-        <p class="text-gray-600 mb-6">
-          确定要删除文章 "{getDisplayTitle(showDeleteConfirm)}" 吗？此操作无法撤销。
+    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div class="bg-white rounded-2xl shadow-xl border border-zinc-200 p-6 max-w-sm w-full mx-auto animate-slide-up">
+        <div class="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center mb-4">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </div>
+
+        <h3 class="text-base font-bold text-zinc-900 mb-1.5">确认删除此文章？</h3>
+        <p class="text-xs text-zinc-500 mb-6 leading-relaxed">
+          即将从 GitHub 仓库中永久删除文章 <span class="font-medium text-zinc-900">"{getDisplayTitle(showDeleteConfirm)}"</span>。此操作不可撤销。
         </p>
-        <div class="flex justify-end space-x-3">
+
+        <div class="flex items-center justify-end gap-2.5">
           <button
             on:click={() => (showDeleteConfirm = null)}
-            class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition"
+            class="px-4 py-2 text-xs font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition"
           >
             取消
           </button>
@@ -154,18 +140,12 @@
               }
               showDeleteConfirm = null;
             }}
-            class="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-md transition"
+            class="px-4 py-2 text-xs font-semibold bg-red-600 text-white hover:bg-red-700 rounded-lg transition shadow-sm active:scale-95"
           >
-            删除
+            确认删除
           </button>
         </div>
       </div>
     </div>
   {/if}
 </div>
-
-<style>
-  .post-list {
-    min-height: 200px;
-  }
-</style>

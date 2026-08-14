@@ -16,47 +16,25 @@
     const urlParams = new URLSearchParams(window.location.search);
     const session = urlParams.get('session');
 
-    console.log('🔍 [App Debug] App onMount 开始');
-    console.log('  - URL:', window.location.href);
-    console.log('  - Session 参数:', session ? '存在' : '不存在');
-
     if (session) {
-      console.log('🔍 [App Debug] 检测到 session 参数，开始处理 OAuth 回调');
       // 保存 session 到 localStorage
       localStorage.setItem('sessionId', session);
-      console.log('  - Session ID 已保存到 localStorage:', session);
 
       // 清除 URL 中的 session 参数
       window.history.replaceState({}, document.title, window.location.pathname);
-      console.log('  - URL 中的 session 参数已清除');
 
       // 调用 API 获取用户信息
-      console.log('🔍 [App Debug] 调用 authApi.getUser() 获取用户信息...');
       const userResponse = await authApi.getUser();
 
       if (userResponse.success && userResponse.data) {
-        console.log('✅ [App Debug] 成功获取用户信息');
-        console.log('  - 用户:', userResponse.data.user);
-
-        // 使用 auth.setSession() 保存会话信息（会自动合并并保留已有仓库与图床配置）
+        // 使用 auth.setSession() 保存会话信息
         auth.setSession(session, userResponse.data.user);
-        console.log('✅ [App Debug] 会话已设置');
       } else {
-        console.error('❌ [App Debug] 获取用户信息失败');
-        console.error('  - 错误:', userResponse.error);
-        // 如果获取用户失败，清除 sessionId 并提示用户重新登录
         localStorage.removeItem('sessionId');
       }
     } else {
-      console.log('🔍 [App Debug] 没有 session 参数，尝试恢复已保存的会话');
       // 恢复已保存的会话
       auth.restoreSession();
-
-      // 检查 localStorage 中的数据
-      console.log('🔍 [App Debug] 检查 localStorage 内容:');
-      console.log('  - sessionId:', localStorage.getItem('sessionId'));
-      console.log('  - user:', localStorage.getItem('user'));
-      console.log('  - repo:', localStorage.getItem('repo'));
     }
 
     // 处理路由
@@ -88,31 +66,31 @@
   }
 </script>
 
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen flex flex-col bg-[#fbfbfb] text-zinc-900 selection:bg-zinc-200">
   <!-- PWA 更新提示 -->
   {#if $updateAvailable}
-    <div class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-blue-600 text-white rounded-lg shadow-lg p-4 z-50 animate-slide-up">
+    <div class="fixed bottom-5 left-4 right-4 md:left-auto md:right-6 md:w-96 bg-zinc-900 text-white rounded-xl shadow-2xl border border-zinc-700/50 p-4 z-50 animate-slide-up">
       <div class="flex items-start gap-3">
-        <div class="flex-shrink-0">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0 text-white mt-0.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </div>
-        <div class="flex-1">
-          <h3 class="font-semibold">发现新版本</h3>
-          <p class="text-sm text-blue-100 mt-1">应用有更新可用，点击刷新获取最新功能。</p>
+        <div class="flex-1 min-w-0">
+          <h3 class="text-sm font-semibold text-white">发现新版本</h3>
+          <p class="text-xs text-zinc-400 mt-0.5 leading-relaxed">应用已有新内容，点击立即刷新载入最新版。</p>
         </div>
       </div>
-      <div class="flex gap-2 mt-3">
+      <div class="flex items-center gap-2 mt-3.5 pt-2 border-t border-zinc-800">
         <button
           on:click={applyUpdate}
-          class="flex-1 bg-white text-blue-600 font-medium py-2 px-4 rounded-md hover:bg-blue-50 transition"
+          class="flex-1 bg-white text-zinc-950 hover:bg-zinc-100 text-xs font-semibold py-2 px-3 rounded-lg transition"
         >
           立即更新
         </button>
         <button
           on:click={() => updateAvailable.set(false)}
-          class="px-4 py-2 text-blue-100 hover:text-white transition"
+          class="px-3 py-2 text-xs text-zinc-400 hover:text-white transition"
         >
           稍后
         </button>
@@ -122,7 +100,7 @@
 
   <Header {navigate} />
 
-  <main class="container mx-auto px-4 py-8">
+  <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 md:py-10">
     {#if currentPage === '/' || currentPage === '' || currentPage === '/login'}
       <HomePage {navigate} />
     {:else if currentPage === '/new'}
@@ -132,26 +110,28 @@
     {:else if currentPage.startsWith('/edit/')}
       <EditPage {navigate} />
     {:else}
-      <div class="text-center py-12">
-        <h1 class="text-2xl font-bold text-gray-900 mb-4">404 - 页面未找到</h1>
-        <p class="text-gray-600 mb-6">抱歉，您访问的页面不存在</p>
+      <div class="text-center py-20">
+        <span class="text-xs font-mono font-semibold uppercase tracking-widest text-zinc-400">404 Error</span>
+        <h1 class="text-3xl font-bold tracking-tight text-zinc-900 mt-2 mb-3">页面未找到</h1>
+        <p class="text-zinc-500 text-sm max-w-sm mx-auto mb-6">抱歉，您访问的页面不存在或已被移除。</p>
         <button
           on:click={() => navigate('/')}
-          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition"
+          class="bg-zinc-900 hover:bg-black text-white text-sm font-medium px-4 py-2 rounded-lg transition shadow-sm"
         >
-          返回首页
+          返回文章列表
         </button>
       </div>
     {/if}
   </main>
 
-  <footer class="bg-gray-900 text-gray-400 py-6 mt-12">
-    <div class="container mx-auto px-4 text-center">
-      <p class="text-sm">
-        Hexo 博客管理器 &copy; {new Date().getFullYear()}
-      </p>
-      <p class="text-xs mt-2">
-        基于 Cloudflare Workers 和 Svelte 构建
+  <footer class="border-t border-zinc-200/80 bg-white py-6 mt-12">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-zinc-600">
+      <div class="flex items-center space-x-2">
+        <span class="font-medium text-zinc-700">BlogWriter</span>
+        <span>&copy; {new Date().getFullYear()}</span>
+      </div>
+      <p class="text-zinc-600 font-mono text-[11px]">
+        Cloudflare Workers & Svelte
       </p>
     </div>
   </footer>

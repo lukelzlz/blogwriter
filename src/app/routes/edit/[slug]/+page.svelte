@@ -19,7 +19,6 @@
     const path = window.location.pathname;
     const match = path.match(/\/edit\/(.+)/);
     if (match) {
-      // 解码 URL 编码的路径
       slug = decodeURIComponent(match[1]);
     }
   }
@@ -53,38 +52,13 @@
     try {
       const response = await postsApi.get(slug, 'main', $auth.repo?.owner, $auth.repo?.name);
 
-      console.log('[DEBUG] loadPost - response:', response);
-
       if (response.success && response.data) {
-        // API 层已自动解包，response.data 直接是文章对象
         const post = response.data as any;
-
-        // 添加日志：检查原始数据
-        console.log('[DEBUG] 原始 post 数据:', post);
-        console.log('[DEBUG] post.sha:', post.sha);
-        console.log('[DEBUG] post.content (前200字符):', post.content?.substring(0, 200));
-        console.log('[DEBUG] post.frontMatter:', post.frontMatter);
-
         const { title, body } = parseFrontMatter(post.content || '');
 
-        // 添加日志：检查解析结果
-        console.log('[DEBUG] 解析后的 title:', title);
-        console.log('[DEBUG] 解析后的 body (前200字符):', body?.substring(0, 200));
-
         editor.setCurrentPost(post);
-
-        // 添加日志：检查 setCurrentPost 后的状态
-        console.log('[DEBUG] setCurrentPost 后的 $editor.currentPost:', $editor.currentPost);
-        console.log('[DEBUG] setCurrentPost 后的 $editor.currentPost?.sha:', $editor.currentPost?.sha);
-        console.log('[DEBUG] setCurrentPost 后的 editor.title:', $editor.title);
-        console.log('[DEBUG] setCurrentPost 后的 editor.content (前200字符):', $editor.content?.substring(0, 200));
-
         editor.setTitle(title || '');
         editor.setContent(body);
-
-        // 添加日志：检查最终状态
-        console.log('[DEBUG] 最终 editor.title:', $editor.title);
-        console.log('[DEBUG] 最终 editor.content (前200字符):', $editor.content?.substring(0, 200));
       } else {
         error = response.error || '加载文章失败';
       }
@@ -137,7 +111,6 @@
       );
 
       if (response.success && response.data) {
-        // API 层已自动解包
         const newPost = response.data as any;
         editor.markAsSaved(newPost.sha);
         editor.setCurrentPost(newPost);
@@ -166,24 +139,9 @@
     editor.setSaving(true);
 
     try {
-      console.log('[DEBUG] updatePost called with:', {
-        slug,
-        currentPost: $editor.currentPost,
-        title: $editor.title,
-        content: $editor.content,
-      });
-
-      // 使用 editor.fullContent，它已经包含了 front-matter（保留原始日期）
       const contentToSend = get(editor.fullContent);
 
-      console.log('[DEBUG] 使用 fullContent:', contentToSend);
-
-      // 检查必要的参数
       if (!contentToSend || !$editor.currentPost.sha) {
-        console.error('[DEBUG] Missing required parameters:', {
-          contentToSend,
-          sha: $editor.currentPost.sha,
-        });
         alert('保存失败: 缺少必要参数');
         return;
       }
@@ -201,10 +159,8 @@
       );
 
       if (response.success && response.data) {
-        // API 层已自动解包
         const updatedPost = response.data as any;
         editor.markAsSaved(updatedPost.sha);
-        // 只更新 sha，不覆盖 title 和 content
         editor.setCurrentPost({
           ...$editor.currentPost,
           sha: updatedPost.sha,
@@ -225,9 +181,7 @@
   async function restoreDraft() {
     const draft = editor.loadFromLocal(slug);
     if (draft) {
-      // 先加载原文章获取最新的 sha，然后应用草稿内容
       await loadPost();
-      // 应用草稿内容并标记为已修改
       editor.setTitle(draft.title, true);
       editor.setContent(draft.content, true);
     }
@@ -240,16 +194,13 @@
     showDraftModal = false;
   }
 
-  // 键盘快捷键
   async function handleKeydown(event: KeyboardEvent) {
-    // Ctrl/Cmd + S 保存
     if ((event.ctrlKey || event.metaKey) && event.key === 's') {
       event.preventDefault();
       await handleSave();
     }
   }
 
-  // 防抖的内容更新
   const debouncedSave = debounce(() => {
     if ($editor.isDirty) {
       editor.saveToLocal();
@@ -260,7 +211,6 @@
     debouncedSave();
   }
 
-  // 图片上传处理
   async function handleImageUpload(file: Blob, onProgress?: (progress: number) => void): Promise<{ url: string; key: string; sha?: string } | null> {
     const s3Config = $auth.s3Config;
     const provider = $auth.imageStorageProvider || (s3Config ? 's3' : 'github');
@@ -277,12 +227,10 @@
     }
 
     try {
-      // 将 Blob 转换为 Base64
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
           const result = reader.result as string;
-          // 移除 data URL 前缀，只保留 base64 数据
           const base64Data = result.split(',')[1];
           resolve(base64Data);
         };
@@ -316,7 +264,6 @@
     }
   }
 
-  // 图片删除处理
   async function handleImageDelete(key: string, sha?: string): Promise<boolean> {
     const s3Config = $auth.s3Config;
     const provider = $auth.imageStorageProvider || (s3Config ? 's3' : 'github');
@@ -338,88 +285,115 @@
       return false;
     }
   }
-
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div class="editor-page">
+<div class="max-w-4xl mx-auto flex flex-col h-[calc(100vh-140px)] min-h-[500px]">
   {#if loading}
-    <div class="flex items-center justify-center py-12">
-      <div class="loading"></div>
-      <span class="ml-3">加载中...</span>
+    <div class="flex-1 flex flex-col items-center justify-center text-zinc-400">
+      <div class="loading !w-6 !h-6 !border-zinc-300 !border-t-zinc-900 mb-3"></div>
+      <span class="text-xs font-medium text-zinc-500">正在载入文章内容...</span>
     </div>
   {:else if error}
-    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-      {error}
+    <div class="bg-zinc-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl flex items-center justify-between">
+      <span>{error}</span>
+      <button on:click={loadPost} class="text-xs underline font-medium">重试</button>
     </div>
   {:else}
-    <div class="editor-container">
-      <!-- 工具栏 -->
-      <div class="toolbar bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-        <div class="flex items-center space-x-4 flex-1">
-          <input
-            type="text"
-            bind:value={$editor.title}
-            placeholder="文章标题"
-            class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
-        <div class="flex items-center space-x-2">
-          {#if $editor.lastSavedAt}
-            <span class="text-sm text-gray-500">
-              上次保存: {new Date($editor.lastSavedAt).toLocaleTimeString()}
-            </span>
-          {/if}
-          {#if $editor.isDirty}
-            <span class="text-sm text-orange-600">未保存</span>
-          {/if}
-          {#if $editor.isSaving}
-            <span class="text-sm text-primary-600">保存中...</span>
-          {/if}
-          <button
-            on:click={handleSave}
-            disabled={$editor.isSaving}
-            class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            保存
-          </button>
-        </div>
+    <!-- 顶部操作栏 -->
+    <div class="flex items-center justify-between gap-3 pb-4 mb-4 border-b border-zinc-200/80">
+      <div class="flex items-center gap-2 min-w-0">
+        <button
+          on:click={() => navigate('/')}
+          class="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition py-1.5 px-2 rounded-md hover:bg-zinc-100 flex-shrink-0"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span>返回</span>
+        </button>
+        <span class="text-zinc-300">/</span>
+        <span class="text-xs font-mono text-zinc-600 truncate max-w-[200px] sm:max-w-xs">{slug}</span>
       </div>
 
-      <!-- 编辑器 -->
-      <div class="editor-content full-width">
-        <div class="editor-pane">
-          <MarkdownEditor
-            content={$editor.content}
-            placeholder="开始编写你的文章..."
-            onChange={(content) => editor.setContent(content)}
-            onImageUpload={($auth.imageStorageProvider === 'github' && $auth.repo) || ($auth.imageStorageProvider === 's3' && $auth.s3Config) ? handleImageUpload : undefined}
-            onImageDelete={($auth.imageStorageProvider === 'github' && $auth.repo) || ($auth.imageStorageProvider === 's3' && $auth.s3Config) ? handleImageDelete : undefined}
-          />
-        </div>
+      <div class="flex items-center gap-3 flex-shrink-0">
+        {#if $editor.lastSavedAt}
+          <span class="hidden sm:inline text-[11px] text-zinc-400 font-mono">
+            已存 {new Date($editor.lastSavedAt).toLocaleTimeString()}
+          </span>
+        {/if}
+        {#if $editor.isDirty}
+          <span class="text-xs text-amber-600 font-medium flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+            <span>未保存</span>
+          </span>
+        {/if}
+        {#if $editor.isSaving}
+          <span class="text-xs text-zinc-500 font-medium flex items-center gap-1.5">
+            <div class="loading !w-3 !h-3 !border-zinc-300 !border-t-zinc-900"></div>
+            <span>保存中...</span>
+          </span>
+        {/if}
+        <button
+          on:click={handleSave}
+          disabled={$editor.isSaving}
+          class="bg-zinc-900 hover:bg-black text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all shadow-sm hover:shadow active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>保存修改</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 沉浸式文稿白底纸质卡片 -->
+    <div class="flex-1 flex flex-col bg-white rounded-2xl border border-zinc-200/80 shadow-sm overflow-hidden p-4 sm:p-8">
+      <input
+        type="text"
+        bind:value={$editor.title}
+        placeholder="文章标题..."
+        class="w-full text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 placeholder:text-zinc-300 border-0 border-b border-zinc-100 pb-4 mb-4 focus:ring-0 focus:outline-none bg-transparent"
+      />
+
+      <div class="flex-1 min-h-[350px]">
+        <MarkdownEditor
+          content={$editor.content}
+          placeholder="开始编写你的文章..."
+          onChange={(content) => editor.setContent(content)}
+          onImageUpload={($auth.imageStorageProvider === 'github' && $auth.repo) || ($auth.imageStorageProvider === 's3' && $auth.s3Config) ? handleImageUpload : undefined}
+          onImageDelete={($auth.imageStorageProvider === 'github' && $auth.repo) || ($auth.imageStorageProvider === 's3' && $auth.s3Config) ? handleImageDelete : undefined}
+        />
       </div>
     </div>
   {/if}
 
-  <!-- 草稿恢复提示 -->
+  <!-- 草稿恢复弹窗 -->
   {#if showDraftModal}
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 class="text-lg font-semibold mb-4">发现未保存的草稿</h3>
-        <p class="text-gray-600 mb-6">
-          我们发现了一个未保存的草稿，您要恢复它吗？
+    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div class="bg-white rounded-2xl shadow-xl border border-zinc-200 p-6 max-w-sm w-full mx-auto animate-slide-up">
+        <div class="w-10 h-10 rounded-xl bg-zinc-100 text-zinc-800 flex items-center justify-center mb-4">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+
+        <h3 class="text-base font-bold text-zinc-900 mb-1.5">发现未保存的本地草稿</h3>
+        <p class="text-xs text-zinc-500 mb-6 leading-relaxed">
+          浏览器中暂存了此文章较新的未提交修改，是否恢复？
         </p>
-        <div class="flex justify-end space-x-3">
+
+        <div class="flex items-center justify-end gap-2.5">
           <button
             on:click={discardDraft}
-            class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition"
+            class="px-4 py-2 text-xs font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition"
           >
             放弃草稿
           </button>
           <button
             on:click={restoreDraft}
-            class="px-4 py-2 bg-primary-600 text-white hover:bg-primary-700 rounded-md transition"
+            class="px-4 py-2 text-xs font-semibold bg-zinc-900 text-white hover:bg-black rounded-lg transition shadow-sm active:scale-95"
           >
             恢复草稿
           </button>
@@ -428,29 +402,3 @@
     </div>
   {/if}
 </div>
-
-<style>
-  .editor-page {
-    min-height: calc(100vh - 200px);
-  }
-
-  .editor-container {
-    background-color: #f9fafb;
-    border-radius: 0.5rem;
-    overflow: hidden;
-  }
-
-  .toolbar {
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    position: relative;
-  }
-
-  .editor-content {
-    display: block;
-    height: calc(100vh - 250px);
-  }
-
-  .editor-pane {
-    height: 100%;
-  }
-</style>

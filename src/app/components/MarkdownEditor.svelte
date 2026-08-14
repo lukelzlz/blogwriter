@@ -33,7 +33,6 @@
   let undoCountdown = 30;
   let undoTimer: ReturnType<typeof setInterval> | null = null;
   let lastUploadedImage: { url: string; key: string; markdownText: string; sha?: string } | null = null;
-
   
   // 移动端快捷键栏相关状态
   let isMobile = false;
@@ -53,11 +52,6 @@
   const TOUCH_THRESHOLD = 10; // 移动超过10px认为是滑动
 
   onMount(() => {
-    console.log('[MarkdownEditor] onMount called');
-    console.log('[MarkdownEditor] editorContainer:', editorContainer);
-    console.log('[MarkdownEditor] content:', content);
-    console.log('[MarkdownEditor] readonly:', readonly);
-
     // 检测移动端和 iOS
     isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
       || ('ontouchstart' in window);
@@ -66,57 +60,40 @@
     
     // 初始化 Ace Editor
     editor = ace.edit(editorContainer);
-    console.log('[MarkdownEditor] Ace Editor created:', editor);
 
-    // 设置主题
+    // 设置主题与模式
     editor.setTheme('ace/theme/github');
-
-    // 设置语言模式
     editor.session.setMode('ace/mode/markdown');
-
-    // 设置字体大小
-    editor.setFontSize(14);
-
-    // 设置自动换行
+    editor.setFontSize(15);
     editor.session.setUseWrapMode(true);
-
-    // 隐藏打印边距
     editor.setShowPrintMargin(false);
 
-    // 设置占位文本
     if (placeholder) {
       editor.setOption('placeholder', placeholder);
     }
 
-    // 设置初始内容
     lastExternalContent = content;
     editor.setValue(content, -1);
-    console.log('[MarkdownEditor] Initial content set:', content);
 
-    // 设置初始只读模式
     lastReadonly = readonly;
     editor.setReadOnly(readonly);
-    console.log('[MarkdownEditor] Initial readonly set:', readonly);
 
     // 监听内容变化
     editor.on('change', () => {
-      console.log('[MarkdownEditor] Change event fired, isInternalUpdate:', isInternalUpdate);
       if (!isInternalUpdate && onChange) {
         const newContent = editor.getValue();
-        console.log('[MarkdownEditor] Calling onChange with:', newContent);
-        // 立即更新 lastExternalContent，避免外部更新触发重新设置
         lastExternalContent = newContent;
         onChange(newContent);
       }
     });
 
-    // 监听粘贴事件（捕获阶段，确保在 Ace 内部处理前拦截图片粘贴）
+    // 监听粘贴事件
     editor.container.addEventListener('paste', handlePaste, true);
     if (editor.textInput && editor.textInput.getElement()) {
       editor.textInput.getElement().addEventListener('paste', handlePaste, true);
     }
     
-    // 监听移动端 Paste 按钮点击（Ace Editor 移动端会显示 Paste 按钮）
+    // 监听移动端 Paste 按钮点击
     editor.container.addEventListener('click', handleMobilePasteClick);
     
     // 移动端：监听编辑器获得焦点时显示快捷键栏
@@ -130,8 +107,6 @@
         window.visualViewport.addEventListener('scroll', handleViewportScroll);
       }
     }
-
-    console.log('[MarkdownEditor] Setup complete');
 
     return () => {
       if (editor) {
@@ -149,7 +124,6 @@
     };
   });
 
-  
   // 处理编辑器获得焦点
   function handleEditorFocus() {
     if (isMobile) {
@@ -159,7 +133,6 @@
   
   // 处理编辑器失去焦点
   function handleEditorBlur() {
-    // 延迟隐藏，避免点击快捷键栏时立即隐藏
     setTimeout(() => {
       if (!editor?.isFocused()) {
         showShortcutBar = false;
@@ -175,7 +148,6 @@
       keyboardHeight = windowHeight - viewportHeight;
       viewportOffsetTop = window.visualViewport.offsetTop;
       
-      // 如果键盘高度大于100，认为键盘已弹出
       if (keyboardHeight > 100 && editor?.isFocused()) {
         showShortcutBar = true;
       } else if (keyboardHeight < 100) {
@@ -184,7 +156,7 @@
     }
   }
   
-  // 处理视口滚动（iOS 上滑动页面时 visualViewport 会滚动）
+  // 处理视口滚动
   function handleViewportScroll() {
     if (window.visualViewport) {
       viewportOffsetTop = window.visualViewport.offsetTop;
@@ -224,57 +196,47 @@
   // 快捷键栏：插入文本
   function insertShortcut(text: string, cursorOffset: number = 0) {
     if (!editor) return;
-    
-    // 保持编辑器焦点
     editor.focus();
     
     const selectedText = editor.getSelectedText();
     
-    // 成对符号映射：完整文本 -> [前缀, 后缀]
     const pairMap: Record<string, [string, string]> = {
-      '****': ['**', '**'],      // 粗体
-      '**': ['*', '*'],          // 斜体
-      '``': ['`', '`'],          // 行内代码
-      '~~~~': ['~~', '~~'],      // 删除线
-      '[]()': ['[', ']()'],      // 链接
-      '![]()': ['![', ']()'],    // 图片
+      '****': ['**', '**'],
+      '**': ['*', '*'],
+      '``': ['`', '`'],
+      '~~~~': ['~~', '~~'],
+      '[]()': ['[', ']()'],
+      '![]()': ['![', ']()'],
     };
     
     if (selectedText) {
-      // 如果有选中文本，根据快捷键类型包裹文本
       let wrappedText = text;
       let newCursorOffset = 0;
       
       if (pairMap[text]) {
         const [prefix, suffix] = pairMap[text];
         wrappedText = `${prefix}${selectedText}${suffix}`;
-        // 链接和图片需要把光标放在 () 内
         if (text === '[]()' || text === '![]()') {
-          newCursorOffset = -1; // 光标放在括号内
+          newCursorOffset = -1;
         }
       } else {
-        // 其他情况直接替换
         wrappedText = text;
       }
       editor.insert(wrappedText);
       
-      // 移动光标（如果需要）
       if (newCursorOffset !== 0) {
         const pos = editor.getCursorPosition();
         editor.moveCursorTo(pos.row, pos.column + newCursorOffset);
       }
     } else {
-      // 没有选中文本，直接插入
       editor.insert(text);
       
-      // 移动光标
       if (cursorOffset !== 0) {
         const pos = editor.getCursorPosition();
         editor.moveCursorTo(pos.row, pos.column + cursorOffset);
       }
     }
     
-    // 触发 onChange
     if (onChange) {
       const newContent = editor.getValue();
       lastExternalContent = newContent;
@@ -282,24 +244,20 @@
     }
   }
   
-  // 快捷键栏：粘贴（处理图片）
+  // 快捷键栏：粘贴
   async function handleShortcutPaste() {
     if (!editor) return;
     
-    // iOS 设备使用特殊的粘贴方法
     if (isIOS) {
       handleIOSPaste();
       return;
     }
     
-    // 保持编辑器焦点
     editor.focus();
     
     try {
-      // 使用 Clipboard API 读取剪贴板
       const clipboardItems = await navigator.clipboard.read();
       for (const item of clipboardItems) {
-        // 查找图片类型
         const imageType = item.types.find(type => type.startsWith('image/'));
         if (imageType && onImageUpload) {
           const blob = await item.getType(imageType);
@@ -307,11 +265,9 @@
           return;
         }
       }
-      // 没有图片，尝试读取文本并插入
       const text = await navigator.clipboard.readText();
       if (text) {
         editor.insert(text);
-        // 触发 onChange
         if (onChange) {
           const newContent = editor.getValue();
           lastExternalContent = newContent;
@@ -319,12 +275,10 @@
         }
       }
     } catch (error) {
-      console.log('[MarkdownEditor] Clipboard read failed, trying readText:', error);
       try {
         const text = await navigator.clipboard.readText();
         if (text) {
           editor.insert(text);
-          // 触发 onChange
           if (onChange) {
             const newContent = editor.getValue();
             lastExternalContent = newContent;
@@ -332,23 +286,18 @@
           }
         }
       } catch (textError) {
-        console.log('[MarkdownEditor] Clipboard readText also failed:', textError);
+        console.log('[MarkdownEditor] Clipboard readText failed:', textError);
       }
     }
   }
   
-  // iOS 专用粘贴处理 - 使用隐藏的 contenteditable 元素
+  // iOS 专用粘贴处理
   function handleIOSPaste() {
     if (!pasteHelperInput) return;
-    
-    // 聚焦到隐藏的输入框，触发系统粘贴
     pasteHelperInput.value = '';
     pasteHelperInput.focus();
-    
-    // 执行粘贴命令
     document.execCommand('paste');
     
-    // 延迟检查粘贴结果
     setTimeout(() => {
       const text = pasteHelperInput.value;
       if (text && editor) {
@@ -360,14 +309,12 @@
           onChange(newContent);
         }
       } else {
-        // 如果没有文本，恢复编辑器焦点
         editor?.focus();
       }
       pasteHelperInput.value = '';
     }, 100);
   }
   
-  // iOS 隐藏输入框的粘贴事件处理
   function handlePasteHelperPaste(event: ClipboardEvent) {
     const items = event.clipboardData?.items;
     if (!items) return;
@@ -378,18 +325,14 @@
         event.stopPropagation();
         const blob = item.getAsFile();
         if (blob) {
-          // 恢复编辑器焦点
           editor?.focus();
           uploadAndInsert(blob);
         }
         return;
       }
     }
-    
-    // 如果是文本，让默认行为处理，然后在 handleIOSPaste 的 setTimeout 中读取
   }
   
-  // 处理文件选择（图片选择器）
   function handleFileSelect(event: Event) {
     const input = event.target as HTMLInputElement;
     const files = input.files;
@@ -401,19 +344,15 @@
         break;
       }
     }
-    
-    // 清空 input 以便可以再次选择同一文件
     input.value = '';
   }
   
-  // 打开图片选择器
   function openImagePicker() {
     if (fileInput) {
       fileInput.click();
     }
   }
 
-  // 粘贴事件处理
   function handlePaste(event: ClipboardEvent) {
     if (!onImageUpload) return;
     
@@ -447,34 +386,24 @@
     }
   }
 
-
-  // 移动端 Paste 按钮点击处理
   function handleMobilePasteClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
-    // 检查是否点击了 Ace Editor 的移动端 Paste 按钮
     if (!target.classList.contains('ace_mobile-button') || target.getAttribute('action') !== 'paste') {
       return;
     }
     
     if (!onImageUpload) return;
-    
-    // 立即阻止默认行为，防止 Ace Editor 执行粘贴命令
     event.preventDefault();
     event.stopPropagation();
-    
-    // 异步处理剪贴板
     handleMobilePasteAsync();
   }
   
-  // 异步处理移动端粘贴
   async function handleMobilePasteAsync() {
     if (!onImageUpload || !editor) return;
     
-    // 使用 Clipboard API 读取剪贴板
     try {
       const clipboardItems = await navigator.clipboard.read();
       for (const item of clipboardItems) {
-        // 查找图片类型
         const imageType = item.types.find(type => type.startsWith('image/'));
         if (imageType) {
           const blob = await item.getType(imageType);
@@ -482,26 +411,22 @@
           return;
         }
       }
-      // 没有图片，尝试读取文本并插入
       const text = await navigator.clipboard.readText();
       if (text) {
         editor.insert(text);
       }
     } catch (error) {
-      // Clipboard API 可能因权限问题失败，尝试读取文本
-      console.log('[MarkdownEditor] Clipboard read failed, trying readText:', error);
       try {
         const text = await navigator.clipboard.readText();
         if (text) {
           editor.insert(text);
         }
       } catch (textError) {
-        console.log('[MarkdownEditor] Clipboard readText also failed:', textError);
+        console.log('[MarkdownEditor] Clipboard readText failed:', textError);
       }
     }
   }
 
-  // 拖拽进入
   function handleDragEnter(event: DragEvent) {
     event.preventDefault();
     if (hasImageFile(event) && onImageUpload) {
@@ -509,7 +434,6 @@
     }
   }
 
-  // 拖拽悬停
   function handleDragOver(event: DragEvent) {
     event.preventDefault();
     if (hasImageFile(event) && onImageUpload) {
@@ -517,10 +441,8 @@
     }
   }
 
-  // 拖拽离开
   function handleDragLeave(event: DragEvent) {
     event.preventDefault();
-    // 检查是否真的离开了容器
     const rect = wrapperContainer.getBoundingClientRect();
     const x = event.clientX;
     const y = event.clientY;
@@ -529,7 +451,6 @@
     }
   }
 
-  // 放下文件
   function handleDrop(event: DragEvent) {
     event.preventDefault();
     isDragging = false;
@@ -541,31 +462,26 @@
       for (const file of files) {
         if (file.type.startsWith('image/')) {
           uploadAndInsert(file);
-          break; // 只处理第一个图片
+          break;
         }
       }
     }
   }
 
-  // 检查是否有图片文件
   function hasImageFile(event: DragEvent): boolean {
     const types = event.dataTransfer?.types;
     if (types?.includes('Files')) {
-      // 在 dragenter/dragover 时无法直接访问文件类型
-      // 所以只检查是否有文件
       return true;
     }
     return false;
   }
 
-  // 在光标位置插入文本
   function insertTextAtCursor(text: string) {
     if (!editor) return;
     isInternalUpdate = true;
     editor.insert(text);
     tick().then(() => {
       isInternalUpdate = false;
-      // 触发 onChange
       if (onChange) {
         const newContent = editor.getValue();
         lastExternalContent = newContent;
@@ -574,28 +490,23 @@
     });
   }
 
-  // 上传并插入
   async function uploadAndInsert(blob: Blob) {
     if (!onImageUpload || !editor) return;
     
-    // 清除之前的撤回状态
     clearUndoTimer();
     
     isUploading = true;
     uploadProgress = 0;
     
-    // 1. 在光标位置插入占位符
     const placeholderId = Date.now();
     const placeholderText = `![上传中...](uploading-${placeholderId})`;
     insertTextAtCursor(placeholderText);
     
     try {
-      // 2. 上传图片（带进度回调）
       const result = await onImageUpload(blob, (progress) => {
         uploadProgress = progress;
       });
       
-      // 3. 替换占位符
       if (result) {
         const markdownText = `![](${result.url})`;
         const currentContent = editor.getValue();
@@ -603,7 +514,6 @@
         isInternalUpdate = true;
         const cursorPos = editor.getCursorPosition();
         editor.setValue(newContent, -1);
-        // 尝试恢复光标位置
         editor.moveCursorToPosition(cursorPos);
         lastExternalContent = newContent;
         tick().then(() => {
@@ -613,10 +523,8 @@
           }
         });
         
-        // 显示撤回提示
         startUndoTimer(result.url, result.key, markdownText, result.sha);
       } else {
-        // 上传失败，移除占位符
         const currentContent = editor.getValue();
         const newContent = currentContent.replace(placeholderText, '');
         isInternalUpdate = true;
@@ -631,7 +539,6 @@
       }
     } catch (error) {
       console.error('Image upload failed:', error);
-      // 上传失败，移除占位符
       const currentContent = editor.getValue();
       const newContent = currentContent.replace(placeholderText, '');
       isInternalUpdate = true;
@@ -649,7 +556,6 @@
     }
   }
 
-  // 开始撤回倒计时
   function startUndoTimer(url: string, key: string, markdownText: string, sha?: string) {
     lastUploadedImage = { url, key, markdownText, sha };
     undoCountdown = 30;
@@ -663,7 +569,6 @@
     }, 1000);
   }
 
-  // 清除撤回计时器
   function clearUndoTimer() {
     if (undoTimer) {
       clearInterval(undoTimer);
@@ -673,13 +578,11 @@
     lastUploadedImage = null;
   }
 
-  // 执行撤回
   async function handleUndo() {
     if (!lastUploadedImage || !onImageDelete || !editor) return;
     
     const { key, markdownText, sha } = lastUploadedImage;
     
-    // 1. 从编辑器中移除图片 markdown
     const currentContent = editor.getValue();
     const newContent = currentContent.replace(markdownText, '');
     isInternalUpdate = true;
@@ -692,28 +595,19 @@
       }
     });
     
-    // 2. 删除远程文件
     try {
       await onImageDelete(key, sha);
     } catch (error) {
       console.error('Failed to delete image:', error);
     }
     
-    // 3. 清除撤回状态
     clearUndoTimer();
   }
 
-  // 外部内容更新时同步到编辑器
   $: if (editor && content !== lastExternalContent) {
-    console.log('[MarkdownEditor] External content update detected:', content);
-    // 使用 tick 确保 Svelte 的响应式系统完成更新
     tick().then(() => {
       const currentEditorContent = editor.getValue();
-      console.log('[MarkdownEditor] Current editor content:', currentEditorContent);
-      console.log('[MarkdownEditor] External content:', content);
-      // 只有当外部内容与编辑器当前内容不同时才更新
       if (content !== currentEditorContent) {
-        console.log('[MarkdownEditor] Updating editor content');
         isInternalUpdate = true;
         lastExternalContent = content;
         editor.setValue(content, -1);
@@ -721,15 +615,12 @@
           isInternalUpdate = false;
         });
       } else {
-        console.log('[MarkdownEditor] Content matches, skipping update');
         lastExternalContent = content;
       }
     });
   }
 
-  // 监听 readonly 变化
   $: if (editor && readonly !== lastReadonly) {
-    console.log('[MarkdownEditor] Readonly changed from', lastReadonly, 'to', readonly);
     lastReadonly = readonly;
     editor.setReadOnly(readonly);
   }
@@ -760,12 +651,12 @@
   {#if isDragging}
     <div class="drag-overlay">
       <div class="drag-hint">
-        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="w-8 h-8 text-zinc-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
           <circle cx="8.5" cy="8.5" r="1.5"></circle>
           <polyline points="21 15 16 10 5 21"></polyline>
         </svg>
-        <span>释放以上传图片</span>
+        <span class="text-sm font-semibold text-zinc-900">释放鼠标以上传图片</span>
       </div>
     </div>
   {/if}
@@ -775,25 +666,25 @@
       <div class="upload-progress-container">
         <div class="upload-progress-bar" style="width: {uploadProgress}%"></div>
       </div>
-      <span>{uploadProgress}%</span>
+      <span class="text-xs font-mono font-medium">{uploadProgress}%</span>
     </div>
   {/if}
   
   {#if showUndoToast && onImageDelete}
     <div class="undo-toast">
       <div class="undo-toast-content">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"></circle>
           <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
-        <span>图片已上传</span>
+        <span class="text-xs font-medium">图片已上传</span>
         <span class="undo-countdown">{undoCountdown}s</span>
       </div>
       <button class="undo-btn" on:click={handleUndo}>
         撤回
       </button>
       <button class="undo-close" on:click={clearUndoTimer} aria-label="关闭">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
@@ -825,7 +716,7 @@
   tabindex="-1"
 />
 
-<!-- 移动端快捷键栏 -->
+<!-- 移动端快捷键栏 (严格保留悬浮计算逻辑，去除圆角) -->
 {#if isMobile && showShortcutBar}
   <div class="shortcut-bar" style="bottom: {keyboardHeight - viewportOffsetTop}px;">
     <div class="shortcut-bar-inner">
@@ -839,7 +730,7 @@
         on:touchend={handleTouchEnd(handleShortcutPaste)}
         aria-label="粘贴"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
           <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
         </svg>
@@ -856,7 +747,7 @@
           on:touchend={handleTouchEnd(openImagePicker)}
           aria-label="选择图片"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
             <circle cx="8.5" cy="8.5" r="1.5"></circle>
             <polyline points="21 15 16 10 5 21"></polyline>
@@ -974,18 +865,18 @@
     width: 100%;
     height: 100%;
     position: relative;
+    background: transparent;
   }
 
   .editor-container {
     width: 100%;
     height: 100%;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
+    background: transparent;
     overflow: hidden;
   }
 
   .editor-wrapper.dragging .editor-container {
-    border: 2px dashed #3b82f6;
+    outline: 2px dashed #18181b;
   }
 
   .drag-overlay {
@@ -994,13 +885,13 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(59, 130, 246, 0.1);
+    background: rgba(0, 0, 0, 0.04);
+    backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
     justify-content: center;
     pointer-events: none;
     z-index: 10;
-    border-radius: 0.5rem;
   }
 
   .drag-hint {
@@ -1008,13 +899,11 @@
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
-    color: #3b82f6;
-    font-size: 1.125rem;
-    font-weight: 500;
-    background: rgba(255, 255, 255, 0.95);
-    padding: 1.5rem 2rem;
-    border-radius: 0.75rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    color: #18181b;
+    background: #ffffff;
+    padding: 1.25rem 2rem;
+    border: 1px solid #e4e4e7;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   }
 
   .upload-indicator {
@@ -1024,59 +913,50 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(59, 130, 246, 0.95);
+    background: #18181b;
     color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
     font-weight: 500;
     z-index: 10;
-    min-width: 120px;
+    min-width: 110px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
   .upload-progress-container {
     flex: 1;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 3px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 2px;
     overflow: hidden;
-    min-width: 60px;
+    min-width: 50px;
   }
 
   .upload-progress-bar {
     height: 100%;
     background: white;
-    border-radius: 3px;
+    border-radius: 2px;
     transition: width 0.15s ease-out;
-  }
-
-  :global(.ace_editor) {
-    font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
-    font-size: 14px;
-    line-height: 1.6;
-  }
-
-  :global(.ace_gutter) {
-    background: #f9fafb;
-    color: #6b7280;
   }
 
   /* 撤回提示 */
   .undo-toast {
     position: fixed;
-    top: 1rem;
+    top: 1.25rem;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    background: #1f2937;
+    background: #09090b;
     color: white;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    padding: 0.6rem 1rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.3);
     z-index: 1000;
-    animation: slideDown 0.3s ease-out;
+    animation: slideDown 0.25s ease-out;
   }
 
   @keyframes slideDown {
@@ -1094,83 +974,59 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
   }
 
   .undo-countdown {
-    color: #9ca3af;
+    color: #a1a1aa;
     font-variant-numeric: tabular-nums;
+    font-family: ui-monospace, monospace;
   }
 
   .undo-btn {
-    background: #3b82f6;
-    color: white;
+    background: #ffffff;
+    color: #09090b;
     border: none;
-    padding: 0.375rem 0.75rem;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    font-weight: 500;
+    padding: 0.25rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: opacity 0.15s;
   }
 
   .undo-btn:hover {
-    background: #2563eb;
+    opacity: 0.9;
   }
 
   .undo-close {
     background: transparent;
     border: none;
-    color: #9ca3af;
-    padding: 0.25rem;
+    color: #71717a;
+    padding: 0.2rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 0.25rem;
-    transition: color 0.15s, background 0.15s;
-    margin-left: auto;
+    border-radius: 9999px;
+    transition: color 0.15s;
   }
 
   .undo-close:hover {
     color: white;
-    background: rgba(255, 255, 255, 0.1);
   }
 
-  /* 移动端适配 */
-  @media (max-width: 768px) {
-    :global(.ace_editor) {
-      font-size: 16px;
-    }
-    
-    .undo-toast {
-      left: 1rem;
-      right: 1rem;
-      transform: none;
-    }
-    
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-1rem);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-  }
-
-  /* 移动端快捷键栏 */
+  /* 移动端快捷键栏 - 绝对保留悬浮计算逻辑，去除圆角(直角设计) */
   :global(.shortcut-bar) {
     position: fixed;
     left: 0;
     right: 0;
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid #e4e4e7;
     z-index: 1000;
     padding: 0;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
     transition: bottom 0.1s ease-out;
     will-change: bottom;
   }
@@ -1178,17 +1034,15 @@
   :global(.shortcut-bar-inner) {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 8px 12px;
+    gap: 3px;
+    padding: 6px 10px;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    /* 添加滚动提示渐变 */
-    mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 24px), transparent);
-    -webkit-mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 24px), transparent);
-    /* 确保触摸滚动流畅 - 允许水平和垂直滑动穿透 */
+    mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 16px), transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 16px), transparent);
     scroll-behavior: smooth;
     touch-action: pan-x pan-y;
   }
@@ -1197,69 +1051,69 @@
     display: none;
   }
 
+  /* 快捷栏按钮：严格去除圆角 (border-radius: 0px) */
   :global(.shortcut-btn) {
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 40px;
-    height: 36px;
-    padding: 0 10px;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-    font-size: 14px;
+    min-width: 38px;
+    height: 34px;
+    padding: 0 8px;
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 0px !important; /* 去除圆角，直角设计 */
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13.5px;
     font-weight: 500;
-    color: #374151;
+    color: #18181b;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.12s ease;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
   }
 
   :global(.shortcut-btn:active) {
-    background: #e5e7eb;
-    transform: scale(0.95);
+    background: #f4f4f5;
   }
 
   :global(.shortcut-btn-paste) {
-    background: #3b82f6;
-    border-color: #3b82f6;
-    color: white;
+    background: #18181b;
+    border-color: #18181b;
+    color: #ffffff;
+    border-radius: 0px !important;
   }
 
   :global(.shortcut-btn-paste:active) {
-    background: #2563eb;
+    background: #000000;
+  }
+
+  :global(.shortcut-btn-image) {
+    background: #27272a;
+    border-color: #27272a;
+    color: #ffffff;
+    border-radius: 0px !important;
+  }
+
+  :global(.shortcut-btn-image:active) {
+    background: #09090b;
   }
 
   :global(.shortcut-divider) {
     width: 1px;
-    height: 24px;
-    background: #e2e8f0;
-    margin: 0 6px;
+    height: 22px;
+    background: #e4e4e7;
+    margin: 0 4px;
     flex-shrink: 0;
   }
 
-  /* 安全区域适配 (iPhone X 等) */
   @supports (padding-bottom: env(safe-area-inset-bottom)) {
     :global(.shortcut-bar) {
       padding-bottom: env(safe-area-inset-bottom);
     }
   }
 
-  /* iOS 粘贴辅助输入框 - 完全隐藏 */
-  .paste-helper-input {
-    position: fixed;
-    top: -9999px;
-    left: -9999px;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  /* 隐藏的文件选择器 */
+  .paste-helper-input,
   .file-input-hidden {
     position: fixed;
     top: -9999px;
@@ -1268,16 +1122,5 @@
     height: 1px;
     opacity: 0;
     pointer-events: none;
-  }
-
-  /* iOS 图片选择按钮样式 */
-  :global(.shortcut-btn-image) {
-    background: #10b981;
-    border-color: #10b981;
-    color: white;
-  }
-
-  :global(.shortcut-btn-image:active) {
-    background: #059669;
   }
 </style>
