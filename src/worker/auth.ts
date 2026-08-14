@@ -221,7 +221,7 @@ export async function handleAuth(
       const sessionId = await createSession(env, user, accessToken);
 
       // 重定向到前端，带上 session ID
-      const frontendUrl = 'https://writer.qwqc.cc';
+      const frontendUrl = env.FRONTEND_URL || 'https://writer.qwqc.cc';
       const redirectUrl = `${frontendUrl}/?session=${sessionId}`;
       return Response.redirect(redirectUrl, 302);
     } catch (error) {

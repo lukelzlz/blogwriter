@@ -3,7 +3,6 @@
   import { onMount } from 'svelte';
 
   export let content = '';
-  let previewContainer: HTMLDivElement;
   let htmlContent = '';
 
   onMount(() => {
@@ -26,7 +25,7 @@
   }
 </script>
 
-<div bind:this={previewContainer} class="markdown-preview">
+<div class="markdown-preview">
   {@html htmlContent}
 </div>
 

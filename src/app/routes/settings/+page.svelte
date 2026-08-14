@@ -20,9 +20,6 @@
   let s3Success = '';
   let showSecretKey = false;
 
-  // 初始化标志，防止响应式语句覆盖用户输入
-  let initialized = false;
-
   // 组件挂载时初始化值
   onMount(() => {
     if ($auth.repo) {
@@ -39,8 +36,6 @@
     if ($auth.s3Config) {
       s3Config = { ...$auth.s3Config };
     }
-
-    initialized = true;
   });
 
   // 当服务商改变时，更新 forcePathStyle 和清空区域
@@ -256,7 +251,18 @@
 </script>
 
 <div class="max-w-2xl mx-auto space-y-6">
-  <h1 class="text-3xl font-bold text-primary-950 mb-6">设置</h1>
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-3xl font-bold text-primary-950">设置</h1>
+    <button
+      on:click={() => navigate('/')}
+      class="text-sm text-primary-600 hover:text-primary-800 font-medium flex items-center gap-1 transition"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      返回文章列表
+    </button>
+  </div>
 
   <!-- GitHub 仓库配置 -->
   <div class="bg-white rounded-lg shadow-sm p-6">

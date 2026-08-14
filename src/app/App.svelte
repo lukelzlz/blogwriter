@@ -2,10 +2,9 @@
   import { onMount } from 'svelte';
   import { auth } from '$stores/auth';
   import { authApi } from '$lib/api';
-  import { updateAvailable, applyUpdate, checkForUpdates } from '$lib/pwa';
+  import { updateAvailable, applyUpdate } from '$lib/pwa';
   import Header from '$components/Header.svelte';
   import HomePage from '$routes/+page.svelte';
-  import LoginPage from '$routes/login/+page.svelte';
   import NewPostPage from '$routes/new/+page.svelte';
   import SettingsPage from '$routes/settings/+page.svelte';
   import EditPage from '$routes/edit/[slug]/+page.svelte';
@@ -31,7 +30,7 @@
       window.history.replaceState({}, document.title, window.location.pathname);
       console.log('  - URL 中的 session 参数已清除');
 
-      // 🔧 修复：调用 API 获取用户信息
+      // 调用 API 获取用户信息
       console.log('🔍 [App Debug] 调用 authApi.getUser() 获取用户信息...');
       const userResponse = await authApi.getUser();
 
@@ -39,7 +38,7 @@
         console.log('✅ [App Debug] 成功获取用户信息');
         console.log('  - 用户:', userResponse.data.user);
 
-        // 使用 auth.setSession() 保存会话信息
+        // 使用 auth.setSession() 保存会话信息（会自动合并并保留已有仓库与图床配置）
         auth.setSession(session, userResponse.data.user);
         console.log('✅ [App Debug] 会话已设置');
       } else {
@@ -69,6 +68,14 @@
 
   function handleRoute() {
     const path = window.location.pathname;
+    // /login 路由重定向到首页
+    if (path === '/login') {
+      window.history.replaceState({}, '', '/');
+      currentPage = '/';
+      window.scrollTo(0, 0);
+      return;
+    }
+
     currentPage = path;
 
     // 滚动到顶部
@@ -113,13 +120,11 @@
     </div>
   {/if}
 
-  <Header />
+  <Header {navigate} />
 
   <main class="container mx-auto px-4 py-8">
-    {#if currentPage === '/' || currentPage === ''}
+    {#if currentPage === '/' || currentPage === '' || currentPage === '/login'}
       <HomePage {navigate} />
-    {:else if currentPage === '/login'}
-      <LoginPage {navigate} />
     {:else if currentPage === '/new'}
       <NewPostPage {navigate} />
     {:else if currentPage === '/settings'}

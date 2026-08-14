@@ -7,7 +7,6 @@
   import LoginButton from '$components/LoginButton.svelte';
 
   export let navigate: (path: string) => void = () => {};
-  let loading = false;
   let hasLoaded = false;
 
   async function loadPostsIfNeeded() {
@@ -41,7 +40,6 @@
       return;
     }
 
-    loading = true;
     posts.setLoading(true);
 
     const postsPath = $auth.postsPath || 'source/_posts';
@@ -62,15 +60,10 @@
       });
 
       console.log('[DEBUG] API response:', response);
-      console.log('[DEBUG] Response success:', response.success);
-      console.log('[DEBUG] Response data:', response.data);
-      console.log('[DEBUG] Response error:', response.error);
 
       if (response.success && response.data) {
         // API 层已自动解包，response.data 直接是文章数组
         const postsData = response.data as any[];
-        console.log('[DEBUG] Posts loaded successfully, count:', postsData?.length);
-        console.log('[DEBUG] Posts details:', postsData);
         posts.setPosts(postsData || []);
       } else {
         console.error('[DEBUG] API returned error:', response.error);
@@ -80,14 +73,12 @@
       console.error('[DEBUG] Exception loading posts:', error);
       posts.setError('加载文章失败');
     } finally {
-      loading = false;
       posts.setLoading(false);
     }
   }
 
   function handleEdit(post: any) {
     // 导航到编辑页面
-    // 对路径进行编码，确保包含特殊字符（如 %）的文件名能正确传递
     navigate(`/edit/${encodeURIComponent(post.path)}`);
   }
 
@@ -95,7 +86,6 @@
     if (!$auth.repo) return;
 
     try {
-      // 不需要编码路径，后端会统一处理编码
       const response = await postsApi.delete(
         post.path,
         post.sha,
@@ -118,11 +108,14 @@
 
 <div class="max-w-4xl mx-auto">
   <div class="flex items-center justify-between mb-6">
-    <h1 class="text-3xl font-bold text-primary-950">文章列表</h1>
+    <h1 class="text-3xl font-bold text-primary-950">
+      {$auth.isAuthenticated ? '文章列表' : 'Hexo 博客管理器'}
+    </h1>
     {#if $auth.isAuthenticated}
       <a
         href="/new"
-        class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md transition flex items-center shadow-sm"
+        on:click|preventDefault={() => navigate('/new')}
+        class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md transition flex items-center shadow-sm font-medium"
       >
         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -138,27 +131,79 @@
   </div>
 
   {#if !$auth.isAuthenticated}
-    <div class="bg-white rounded-lg shadow-sm p-8 text-center">
-      <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-        />
-      </svg>
-      <h2 class="text-xl font-semibold mb-4">请先登录</h2>
-      <p class="text-gray-600 mb-6">登录后即可管理您的 Hexo 博客文章</p>
-      <LoginButton />
+    <!-- 未登录首页引导卡片 -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 md:p-12 text-center max-w-xl mx-auto">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-50 text-primary-600 mb-6 shadow-inner">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+          />
+        </svg>
+      </div>
+
+      <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-3">移动端 Hexo 写作新体验</h2>
+      <p class="text-gray-600 mb-8 leading-relaxed">
+        随时随地在手机或电脑端管理 Hexo 博客文章，支持实时预览、图片粘贴秒传及 GitHub 直连同步。
+      </p>
+
+      <div class="mb-8">
+        <LoginButton />
+      </div>
+
+      <!-- 功能特性 -->
+      <div class="pt-6 border-t border-gray-100 text-left">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-4 text-center">核心功能</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-600">
+          <div class="flex items-center space-x-2">
+            <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>GitHub 文章增删改查</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>Markdown 实时预览</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>S3 / R2 图床粘贴秒传</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>本地草稿与自动保存</span>
+          </div>
+        </div>
+      </div>
     </div>
   {:else if !$auth.repo}
-    <div class="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-6">
-      <p class="text-primary-800">
-        请先在设置中配置您的 GitHub 仓库信息
-      </p>
-      <a href="/settings" class="text-primary-600 hover:text-primary-700 underline mt-2 inline-block font-medium">
-        前往设置
-      </a>
+    <div class="bg-primary-50 border border-primary-200 rounded-xl p-6 mb-6">
+      <div class="flex items-start space-x-3">
+        <svg class="w-6 h-6 text-primary-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div>
+          <h3 class="font-semibold text-primary-900">请先配置 GitHub 仓库</h3>
+          <p class="text-primary-800 text-sm mt-1">
+            尚未指定存放 Hexo 博客文章的 GitHub 仓库，配置后即可加载文章列表。
+          </p>
+          <a
+            href="/settings"
+            on:click|preventDefault={() => navigate('/settings')}
+            class="inline-block mt-3 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
+          >
+            前往设置仓库
+          </a>
+        </div>
+      </div>
     </div>
   {:else}
     <PostList

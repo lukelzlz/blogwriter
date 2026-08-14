@@ -5,7 +5,7 @@
     "module": "ESNext",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
-    "types": ["@cloudflare/workers-types"],
+    "types": ["@cloudflare/workers-types", "vite/client"],
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -29,7 +29,8 @@
       "$shared/*": ["./src/shared/*"],
       "$lib/*": ["./src/app/lib/*"],
       "$components/*": ["./src/app/components/*"],
-      "$stores/*": ["./src/app/stores/*"]
+      "$stores/*": ["./src/app/stores/*"],
+      "$routes/*": ["./src/app/routes/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.svelte"],

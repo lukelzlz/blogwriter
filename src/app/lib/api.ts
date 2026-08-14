@@ -49,11 +49,11 @@ async function handleSessionExpired(): Promise<void> {
       }
     }
 
-    // 如果获取 OAuth URL 失败，重定向到登录页面
-    window.location.href = '/login';
+    // 如果获取 OAuth URL 失败，重定向到首页
+    window.location.href = '/';
   } catch (error) {
-    // 重定向到登录页面
-    window.location.href = '/login';
+    // 重定向到首页
+    window.location.href = '/';
   } finally {
     isReauthenticating = false;
   }

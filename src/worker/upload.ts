@@ -36,7 +36,7 @@ async function sha256(data: string | ArrayBuffer): Promise<ArrayBuffer> {
 // 计算 HMAC-SHA256
 async function hmacSha256(key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayBuffer> {
   const encoder = new TextEncoder();
-  const keyBuffer = key instanceof Uint8Array ? key.buffer.slice(key.byteOffset, key.byteOffset + key.byteLength) : key;
+  const keyBuffer: ArrayBuffer = key instanceof Uint8Array ? (key.buffer.slice(key.byteOffset, key.byteOffset + key.byteLength) as ArrayBuffer) : (key as ArrayBuffer);
   const cryptoKey = await crypto.subtle.importKey(
     'raw',
     keyBuffer,

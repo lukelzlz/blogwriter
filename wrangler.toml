@@ -12,6 +12,7 @@ preview_id = "3a5840be829b483c95327beb446df256"
 [vars]
 GITHUB_CLIENT_ID = "Ov23lif971sKaprYiDUw"
 GITHUB_REDIRECT_URI = "https://writer-api.qwqc.cc/auth/callback"
+FRONTEND_URL = "https://writer.qwqc.cc"
 
 # Secrets (use: wrangler secret put <name>)
 # GITHUB_CLIENT_SECRET - GitHub OAuth App Client Secret

@@ -8,7 +8,7 @@ interface PostsState {
 }
 
 function createPostsStore() {
-  const { subscribe, set, update } = writable<PostsState>({
+  const { subscribe, update } = writable<PostsState>({
     posts: [],
     loading: false,
     error: null,

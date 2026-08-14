@@ -81,6 +81,11 @@
     // 隐藏打印边距
     editor.setShowPrintMargin(false);
 
+    // 设置占位文本
+    if (placeholder) {
+      editor.setOption('placeholder', placeholder);
+    }
+
     // 设置初始内容
     lastExternalContent = content;
     editor.setValue(content, -1);
@@ -214,7 +219,6 @@
     // 保持编辑器焦点
     editor.focus();
     
-    const selection = editor.getSelection();
     const selectedText = editor.getSelectedText();
     
     // 成对符号映射：完整文本 -> [前缀, 后缀]
