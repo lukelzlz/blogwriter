@@ -3,7 +3,7 @@ import type { Post, CreatePostParams, UpdatePostParams, ApiResponse, ImageUpload
 
 
 // API 基础 URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? 'https://writer-api.qwqc.cc' : '');
 
 // 是否正在进行重新认证
 let isReauthenticating = false;
@@ -75,7 +75,16 @@ async function request<T>(
       },
     });
 
-    const data: { error?: string; data?: T; [key: string]: unknown } = await response.json();
+    const text = await response.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return {
+        success: false,
+        error: `服务器响应异常 (${response.status})`,
+      };
+    }
 
     if (!response.ok) {
       // 检测会话过期错误（401 状态码且错误信息包含 session 相关内容）
