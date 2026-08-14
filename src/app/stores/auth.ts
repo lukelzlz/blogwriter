@@ -20,7 +20,7 @@ const DEFAULT_GITHUB_IMAGE_CONFIG: GitHubImageConfig = {
 };
 
 function createAuthStore() {
-  const { subscribe, update } = writable<AuthState>({
+  const { subscribe, set, update } = writable<AuthState>({
     isAuthenticated: false,
     user: null,
     sessionId: null,
@@ -189,6 +189,8 @@ function createAuthStore() {
 
   return {
     subscribe,
+    set,
+    update,
     restoreSession,
     setSession,
     clearSession,

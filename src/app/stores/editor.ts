@@ -161,6 +161,8 @@ ${content}`;
 
   return {
     subscribe,
+    set,
+    update,
     setCurrentPost,
     setTitle,
     setContent,
