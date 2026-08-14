@@ -112,15 +112,36 @@ export interface S3ProviderPreset {
   forcePathStyle: boolean;
 }
 
+// 图床服务商类型
+export type ImageStorageProvider = 'github' | 's3';
+
+// GitHub 仓库图床配置
+export interface GitHubImageConfig {
+  pathPrefix?: string;        // 存储路径前缀，默认 'source/images'
+  branch?: string;            // 目标分支，默认仓库默认分支
+}
+
 // 图片上传请求参数
 export interface ImageUploadParams {
-  imageData: string;          // Base64 编码的图片数据
-  mimeType: string;           // MIME 类型，如 image/png
-  config: S3Config;           // S3 配置
+  imageData: string;                    // Base64 编码的图片数据
+  mimeType: string;                     // MIME 类型，如 image/png
+  provider?: ImageStorageProvider;       // 图床服务商类型，默认 's3' 兼容旧版本
+  config?: S3Config;                    // S3 配置（provider 为 s3 时需要）
+  githubConfig?: GitHubImageConfig;     // GitHub 配置（provider 为 github 时使用）
 }
 
 // 图片上传响应
 export interface ImageUploadResponse {
-  url: string;                // 图片访问 URL
-  key: string;                // 存储 key
+  url: string;                // 图片访问 URL / Markdown 引用路径
+  key: string;                // 存储 key 或文件路径
+  sha?: string;               // GitHub commit/file sha（用于撤回删除）
 }
+
+// 图片删除请求参数
+export interface ImageDeleteParams {
+  key: string;                          // 存储 key 或文件路径
+  provider?: ImageStorageProvider;       // 图床服务商类型
+  config?: S3Config;                    // S3 配置
+  sha?: string;                         // GitHub file sha
+}
+

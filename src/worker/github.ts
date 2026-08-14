@@ -185,6 +185,58 @@ export async function createOrUpdateFile(
   return await response.json() as { content: GitHubFile; commit: { sha: string } };
 }
 
+// 创建或更新二进制文件（contentBase64 必须为 Base64 编码字符串）
+export async function createOrUpdateBinaryFile(
+  owner: string,
+  repo: string,
+  path: string,
+  contentBase64: string,
+  message: string,
+  accessToken: string,
+  sha?: string,
+  branch?: string
+): Promise<{ content: GitHubFile; commit: { sha: string } }> {
+  const body: any = {
+    message,
+    content: contentBase64,
+  };
+
+  if (sha) {
+    body.sha = sha;
+  }
+
+  if (branch) {
+    body.branch = branch;
+  }
+
+  const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${encodePathForGitHub(path)}`;
+
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `token ${accessToken}`,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'User-Agent': 'BlogWriter/1.0',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let error;
+    try {
+      error = JSON.parse(errorText);
+    } catch (e) {
+      error = { message: errorText };
+    }
+    throw new Error(`Failed to upload file to GitHub: ${error.message || errorText}`);
+  }
+
+  return await response.json() as { content: GitHubFile; commit: { sha: string } };
+}
+
+
 // 删除文件
 export async function deleteFile(
   owner: string,

@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import type { GitHubUser, S3Config } from '$shared/types';
+import type { GitHubUser, S3Config, ImageStorageProvider, GitHubImageConfig } from '$shared/types';
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -10,8 +10,14 @@ interface AuthState {
     name: string;
   } | null;
   postsPath: string;
+  imageStorageProvider: ImageStorageProvider;
+  githubImageConfig: GitHubImageConfig;
   s3Config: S3Config | null;
 }
+
+const DEFAULT_GITHUB_IMAGE_CONFIG: GitHubImageConfig = {
+  pathPrefix: 'source/images',
+};
 
 function createAuthStore() {
   const { subscribe, update } = writable<AuthState>({
@@ -20,6 +26,8 @@ function createAuthStore() {
     sessionId: null,
     repo: null,
     postsPath: 'source/_posts',
+    imageStorageProvider: 'github',
+    githubImageConfig: DEFAULT_GITHUB_IMAGE_CONFIG,
     s3Config: null,
   });
 
@@ -30,8 +38,11 @@ function createAuthStore() {
     const repoJson = localStorage.getItem('repo');
     const postsPath = localStorage.getItem('postsPath') || 'source/_posts';
     const s3ConfigJson = localStorage.getItem('s3Config');
+    const provider = (localStorage.getItem('imageStorageProvider') as ImageStorageProvider) || 'github';
+    const githubImageConfigJson = localStorage.getItem('githubImageConfig');
 
     const s3Config = s3ConfigJson ? JSON.parse(s3ConfigJson) : null;
+    const githubImageConfig = githubImageConfigJson ? JSON.parse(githubImageConfigJson) : DEFAULT_GITHUB_IMAGE_CONFIG;
     const repo = repoJson ? JSON.parse(repoJson) : null;
 
     if (sessionId && userJson) {
@@ -42,10 +53,12 @@ function createAuthStore() {
         user: JSON.parse(userJson),
         repo,
         postsPath,
+        imageStorageProvider: provider,
+        githubImageConfig,
         s3Config,
       }));
     } else {
-      // 未登录时也恢复已保存的仓库与 S3 配置
+      // 未登录时也恢复已保存的仓库与图床配置
       update((state) => ({
         ...state,
         isAuthenticated: false,
@@ -53,6 +66,8 @@ function createAuthStore() {
         sessionId: null,
         repo: repo || state.repo,
         postsPath: postsPath || state.postsPath,
+        imageStorageProvider: provider || state.imageStorageProvider,
+        githubImageConfig: githubImageConfig || state.githubImageConfig,
         s3Config: s3Config || state.s3Config,
       }));
     }
@@ -71,6 +86,9 @@ function createAuthStore() {
     const savedPostsPath = localStorage.getItem('postsPath') || 'source/_posts';
     const savedS3ConfigJson = localStorage.getItem('s3Config');
     const savedS3Config = savedS3ConfigJson ? JSON.parse(savedS3ConfigJson) : null;
+    const savedProvider = (localStorage.getItem('imageStorageProvider') as ImageStorageProvider) || 'github';
+    const savedGhConfigJson = localStorage.getItem('githubImageConfig');
+    const savedGhConfig = savedGhConfigJson ? JSON.parse(savedGhConfigJson) : DEFAULT_GITHUB_IMAGE_CONFIG;
 
     update((state) => ({
       ...state,
@@ -79,6 +97,8 @@ function createAuthStore() {
       user,
       repo: savedRepo || state.repo,
       postsPath: state.postsPath !== 'source/_posts' ? state.postsPath : savedPostsPath,
+      imageStorageProvider: savedProvider,
+      githubImageConfig: savedGhConfig,
       s3Config: state.s3Config || savedS3Config,
     }));
   }
@@ -90,6 +110,8 @@ function createAuthStore() {
     if (clearConfig) {
       localStorage.removeItem('repo');
       localStorage.removeItem('postsPath');
+      localStorage.removeItem('imageStorageProvider');
+      localStorage.removeItem('githubImageConfig');
       localStorage.removeItem('s3Config');
     }
 
@@ -98,7 +120,13 @@ function createAuthStore() {
       isAuthenticated: false,
       user: null,
       sessionId: null,
-      ...(clearConfig ? { repo: null, postsPath: 'source/_posts', s3Config: null } : {}),
+      ...(clearConfig ? {
+        repo: null,
+        postsPath: 'source/_posts',
+        imageStorageProvider: 'github',
+        githubImageConfig: DEFAULT_GITHUB_IMAGE_CONFIG,
+        s3Config: null
+      } : {}),
     }));
   }
 
@@ -118,6 +146,24 @@ function createAuthStore() {
     update((state) => ({
       ...state,
       postsPath,
+    }));
+  }
+
+  // 设置图床服务商 (github / s3)
+  function setImageStorageProvider(provider: ImageStorageProvider) {
+    localStorage.setItem('imageStorageProvider', provider);
+    update((state) => ({
+      ...state,
+      imageStorageProvider: provider,
+    }));
+  }
+
+  // 设置 GitHub 图床配置
+  function setGitHubImageConfig(config: GitHubImageConfig) {
+    localStorage.setItem('githubImageConfig', JSON.stringify(config));
+    update((state) => ({
+      ...state,
+      githubImageConfig: config,
     }));
   }
 
@@ -147,9 +193,12 @@ function createAuthStore() {
     clearSession,
     setRepo,
     setPostsPath,
+    setImageStorageProvider,
+    setGitHubImageConfig,
     setS3Config,
     getS3Config,
   };
 }
 
 export const auth = createAuthStore();
+

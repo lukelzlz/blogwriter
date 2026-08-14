@@ -3,7 +3,7 @@
   import { auth } from '$stores/auth';
   import { repoApi } from '$lib/api';
   import { S3_PROVIDERS, getDefaultS3Config } from '$lib/s3-presets';
-  import type { S3Config } from '$shared/types';
+  import type { S3Config, ImageStorageProvider, GitHubImageConfig } from '$shared/types';
 
   export let navigate: (path: string) => void = () => {};
   let owner = '';
@@ -12,6 +12,15 @@
   let loading = false;
   let error = '';
   let success = '';
+
+  // 图床服务商类型
+  let imageStorageProvider: ImageStorageProvider = 'github';
+
+  // GitHub 图床配置
+  let githubImageConfig: GitHubImageConfig = { pathPrefix: 'source/images' };
+  let ghImageLoading = false;
+  let ghImageError = '';
+  let ghImageSuccess = '';
 
   // S3 配置
   let s3Config: S3Config = getDefaultS3Config();
@@ -33,10 +42,47 @@
       postsPath = $auth.postsPath;
     }
 
+    if ($auth.imageStorageProvider) {
+      imageStorageProvider = $auth.imageStorageProvider;
+    }
+
+    if ($auth.githubImageConfig) {
+      githubImageConfig = { ...$auth.githubImageConfig };
+    }
+
     if ($auth.s3Config) {
       s3Config = { ...$auth.s3Config };
     }
   });
+
+  function handleSelectProvider(provider: ImageStorageProvider) {
+    imageStorageProvider = provider;
+    auth.setImageStorageProvider(provider);
+  }
+
+  function handleSaveGitHubImageConfig() {
+    ghImageLoading = true;
+    ghImageError = '';
+    ghImageSuccess = '';
+
+    try {
+      if (!githubImageConfig.pathPrefix?.trim()) {
+        githubImageConfig.pathPrefix = 'source/images';
+      }
+      auth.setImageStorageProvider('github');
+      auth.setGitHubImageConfig({
+        pathPrefix: githubImageConfig.pathPrefix.trim(),
+        branch: githubImageConfig.branch?.trim() || undefined,
+      });
+      ghImageSuccess = 'GitHub 仓库图床配置已保存';
+      setTimeout(() => (ghImageSuccess = ''), 3000);
+    } catch (err) {
+      ghImageError = '保存配置失败';
+      console.error('Error saving GitHub image config:', err);
+    } finally {
+      ghImageLoading = false;
+    }
+  }
 
   // 当服务商改变时，更新 forcePathStyle 和清空区域
   function handleProviderChange() {
@@ -126,8 +172,9 @@
     s3Success = '';
 
     try {
+      auth.setImageStorageProvider('s3');
       auth.setS3Config(s3Config);
-      s3Success = '图床配置已保存';
+      s3Success = 'S3 图床配置已保存并设为当前生效图床';
       setTimeout(() => (s3Success = ''), 3000);
     } catch (err) {
       s3Error = '保存配置失败';
@@ -138,10 +185,10 @@
   }
 
   function handleClearS3Config() {
-    if (confirm('确定要清除图床配置吗？')) {
+    if (confirm('确定要清除 S3 图床配置吗？')) {
       auth.setS3Config(null);
       s3Config = getDefaultS3Config();
-      s3Success = '图床配置已清除';
+      s3Success = 'S3 图床配置已清除';
       setTimeout(() => (s3Success = ''), 3000);
     }
   }
@@ -156,6 +203,8 @@
     version: number;
     repo: { owner: string; name: string } | null;
     postsPath: string;
+    imageStorageProvider?: ImageStorageProvider;
+    githubImageConfig?: GitHubImageConfig;
     s3Config: S3Config | null;
   }
 
@@ -168,6 +217,8 @@
         version: 1,
         repo: $auth.repo,
         postsPath: $auth.postsPath,
+        imageStorageProvider: $auth.imageStorageProvider,
+        githubImageConfig: $auth.githubImageConfig,
         s3Config: $auth.s3Config,
       };
 
@@ -232,6 +283,18 @@
         postsPath = config.postsPath;
       }
 
+      // 导入图床服务商
+      if (config.imageStorageProvider) {
+        auth.setImageStorageProvider(config.imageStorageProvider);
+        imageStorageProvider = config.imageStorageProvider;
+      }
+
+      // 导入 GitHub 图床配置
+      if (config.githubImageConfig) {
+        auth.setGitHubImageConfig(config.githubImageConfig);
+        githubImageConfig = { ...config.githubImageConfig };
+      }
+
       // 导入 S3 配置
       if (config.s3Config) {
         auth.setS3Config(config.s3Config);
@@ -247,6 +310,7 @@
       console.error('Import config error:', err);
     }
   }
+
 
 </script>
 
@@ -348,292 +412,409 @@
     </div>
   </div>
 
-  <!-- S3 图床配置 -->
+  <!-- 图床存储配置 -->
   <div class="bg-white rounded-lg shadow-sm p-6">
-    <h2 class="text-xl font-semibold mb-4">图床配置（S3 兼容存储）</h2>
-    <p class="text-gray-600 mb-6">
-      配置图片上传存储，支持 AWS S3、阿里云 OSS、腾讯云 COS、七牛云等 S3 兼容存储
-    </p>
-
-    {#if s3Error}
-      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-        {s3Error}
-      </div>
-    {/if}
-
-    {#if s3Success}
-      <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-        {s3Success}
-      </div>
-    {/if}
-
-    <div class="space-y-4">
-      <!-- 服务商选择 -->
+    <div class="flex items-center justify-between mb-4">
       <div>
-        <label for="s3Provider" class="block text-sm font-medium text-gray-700 mb-2">
-          存储服务商
-        </label>
-        <select
-          id="s3Provider"
-          bind:value={s3Config.provider}
-          on:change={handleProviderChange}
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-        >
-          <option value="">请选择服务商</option>
-          {#each Object.entries(S3_PROVIDERS) as [key, provider]}
-            <option value={key}>{provider.name}</option>
-          {/each}
-        </select>
-      </div>
-
-      <!-- 区域选择 -->
-      {#if s3Config.provider && S3_PROVIDERS[s3Config.provider]}
-        <div>
-          <label for="s3Region" class="block text-sm font-medium text-gray-700 mb-2">
-            区域
-          </label>
-          {#if S3_PROVIDERS[s3Config.provider].regions.length > 1 || S3_PROVIDERS[s3Config.provider].regions[0].endpoint}
-            <select
-              id="s3Region"
-              bind:value={s3Config.region}
-              on:change={handleRegionChange}
-              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="">请选择区域</option>
-              {#each S3_PROVIDERS[s3Config.provider].regions as region}
-                <option value={region.id}>{region.name}</option>
-              {/each}
-            </select>
-          {:else}
-            <input
-              id="s3Region"
-              type="text"
-              bind:value={s3Config.region}
-              placeholder="例如: us-east-1"
-              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          {/if}
-        </div>
-      {/if}
-
-      <!-- Endpoint -->
-      <div>
-        <label for="s3Endpoint" class="block text-sm font-medium text-gray-700 mb-2">
-          Endpoint
-        </label>
-        <input
-          id="s3Endpoint"
-          type="text"
-          bind:value={s3Config.endpoint}
-          placeholder="例如: s3.us-east-1.amazonaws.com"
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-        />
-        <p class="text-sm text-gray-500 mt-1">
-          S3 服务端点地址（不含 https://）
+        <h2 class="text-xl font-semibold">图床存储配置</h2>
+        <p class="text-gray-600 mt-1 text-sm">
+          配置文章插图上传的目标存储，支持保存在 GitHub 博客仓库或 S3 / R2 兼容云存储
         </p>
       </div>
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+        当前生效: {imageStorageProvider === 'github' ? 'GitHub 博客仓库' : 'S3 兼容存储'}
+      </span>
+    </div>
 
-      <!-- Access Key ID -->
-      <div>
-        <label for="s3AccessKeyId" class="block text-sm font-medium text-gray-700 mb-2">
-          Access Key ID
-        </label>
-        <input
-          id="s3AccessKeyId"
-          type="text"
-          bind:value={s3Config.accessKeyId}
-          placeholder="输入 Access Key ID"
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-        />
-      </div>
+    <!-- Provider 切换 Tab -->
+    <div class="flex border-b border-gray-200 mb-6">
+      <button
+        type="button"
+        on:click={() => handleSelectProvider('github')}
+        class="py-2.5 px-4 font-medium text-sm border-b-2 flex items-center gap-2 transition-colors {imageStorageProvider === 'github' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+      >
+        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        GitHub 博客仓库图床 (推荐)
+      </button>
+      <button
+        type="button"
+        on:click={() => handleSelectProvider('s3')}
+        class="py-2.5 px-4 font-medium text-sm border-b-2 flex items-center gap-2 transition-colors {imageStorageProvider === 's3' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z" />
+        </svg>
+        S3 / R2 兼容云存储
+      </button>
+    </div>
 
-      <!-- Secret Access Key -->
-      <div>
-        <label for="s3SecretAccessKey" class="block text-sm font-medium text-gray-700 mb-2">
-          Secret Access Key
-        </label>
-        <div class="relative">
-          {#if showSecretKey}
-            <input
-              id="s3SecretAccessKey"
-              type="text"
-              bind:value={s3Config.secretAccessKey}
-              placeholder="输入 Secret Access Key"
-              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 pr-12"
-            />
-          {:else}
-            <input
-              id="s3SecretAccessKey"
-              type="password"
-              bind:value={s3Config.secretAccessKey}
-              placeholder="输入 Secret Access Key"
-              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 pr-12"
-            />
-          {/if}
-          <button
-            type="button"
-            on:click={() => showSecretKey = !showSecretKey}
-            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-          >
-            {#if showSecretKey}
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd" />
-                <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
-              </svg>
+    <!-- GitHub 图床配置面板 -->
+    {#if imageStorageProvider === 'github'}
+      <div class="space-y-4">
+        {#if ghImageError}
+          <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
+            {ghImageError}
+          </div>
+        {/if}
+
+        {#if ghImageSuccess}
+          <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded text-sm">
+            {ghImageSuccess}
+          </div>
+        {/if}
+
+        <!-- 仓库绑定状态提示 -->
+        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-700">目标 GitHub 博客仓库:</span>
+            {#if $auth.repo}
+              <a
+                href={`https://github.com/${$auth.repo.owner}/${$auth.repo.name}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-sm text-primary-600 hover:underline font-mono"
+              >
+                {$auth.repo.owner}/{$auth.repo.name}
+              </a>
             {:else}
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
-              </svg>
+              <span class="text-sm text-amber-600 font-medium">尚未绑定仓库，请在上方先保存仓库配置</span>
+            {/if}
+          </div>
+        </div>
+
+        <!-- 存储目录 -->
+        <div>
+          <label for="ghPathPrefix" class="block text-sm font-medium text-gray-700 mb-1">
+            仓库存储目录路径
+          </label>
+          <input
+            id="ghPathPrefix"
+            type="text"
+            bind:value={githubImageConfig.pathPrefix}
+            placeholder="例如: source/images"
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <p class="text-xs text-gray-500 mt-1">
+            Hexo 静态站点默认会将 <code>source/images</code> 映射生成为 <code>/images</code> 根访问路径。
+          </p>
+        </div>
+
+        <!-- 目标分支 (可选) -->
+        <div>
+          <label for="ghBranch" class="block text-sm font-medium text-gray-700 mb-1">
+            目标分支（可选）
+          </label>
+          <input
+            id="ghBranch"
+            type="text"
+            bind:value={githubImageConfig.branch}
+            placeholder="留空使用仓库默认分支（如 main / master）"
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+        </div>
+
+        <!-- 规则与示例说明 -->
+        <div class="bg-primary-50 border border-primary-200 rounded-md p-3 text-xs text-primary-800 space-y-1">
+          <p class="font-medium">📌 图片上传规则说明：</p>
+          <p>• 自动采用年月分级归档保存：<code>{githubImageConfig.pathPrefix || 'source/images'}/2026/08/时间戳-随机ID.png</code></p>
+          <p>• 插入到 Markdown 的相对路径：<code>![](/images/2026/08/时间戳-随机ID.png)</code></p>
+          <p>• 网站使用 Hexo 生成部署后，图片可天然正确加载，无需第三方图床服务器</p>
+        </div>
+
+        <div class="pt-2">
+          <button
+            on:click={handleSaveGitHubImageConfig}
+            disabled={ghImageLoading || !$auth.repo}
+            class="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {#if ghImageLoading}
+              <span>保存中...</span>
+            {:else}
+              保存 GitHub 图床配置
             {/if}
           </button>
         </div>
-        <p class="text-sm text-gray-500 mt-1">
-          密钥仅存储在本地浏览器中
-        </p>
       </div>
+    {/if}
 
-      <!-- Bucket -->
-      <div>
-        <label for="s3Bucket" class="block text-sm font-medium text-gray-700 mb-2">
-          Bucket 名称
-        </label>
-        <input
-          id="s3Bucket"
-          type="text"
-          bind:value={s3Config.bucket}
-          placeholder="输入存储桶名称"
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-        />
-      </div>
-
-      <!-- 公开访问 URL -->
-      <div>
-        <label for="s3PublicUrl" class="block text-sm font-medium text-gray-700 mb-2">
-          公开访问 URL
-        </label>
-        <input
-          id="s3PublicUrl"
-          type="text"
-          bind:value={s3Config.publicUrl}
-          placeholder="例如: https://cdn.example.com"
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-        />
-        <p class="text-sm text-gray-500 mt-1">
-          图片的公开访问域名（CDN 域名或存储桶公开 URL）
-        </p>
-      </div>
-
-      <!-- 路径前缀 -->
-      <div>
-        <label for="s3PathPrefix" class="block text-sm font-medium text-gray-700 mb-2">
-          路径前缀（可选）
-        </label>
-        <input
-          id="s3PathPrefix"
-          type="text"
-          bind:value={s3Config.pathPrefix}
-          placeholder="例如: blog/images"
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-        />
-        <p class="text-sm text-gray-500 mt-1">
-          上传文件的路径前缀，不需要以 / 开头或结尾
-        </p>
-      </div>
-
-      <!-- URL 后缀 -->
-      <div>
-        <label for="s3UrlSuffix" class="block text-sm font-medium text-gray-700 mb-2">
-          URL 后缀（可选）
-        </label>
-        <input
-          id="s3UrlSuffix"
-          type="text"
-          bind:value={s3Config.urlSuffix}
-          placeholder="例如: -ys"
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-        />
-        <p class="text-sm text-gray-500 mt-1">
-          图片 URL 后缀，用于 CDN 图片处理样式（如七牛云的 -ys）
-        </p>
-      </div>
-
-      <!-- 路径风格 -->
-      <div class="flex items-center">
-        <input
-          id="s3ForcePathStyle"
-          type="checkbox"
-          bind:checked={s3Config.forcePathStyle}
-          class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-        />
-        <label for="s3ForcePathStyle" class="ml-2 block text-sm text-gray-700">
-          使用路径风格（Path Style）
-        </label>
-      </div>
-      <p class="text-sm text-gray-500 -mt-2 ml-6">
-        MinIO、Cloudflare R2 等需要勾选此选项
+    <!-- S3 图床配置面板 -->
+    {#if imageStorageProvider === 's3'}
+      <p class="text-gray-600 mb-6 text-sm">
+        配置第三方云存储，支持 AWS S3、阿里云 OSS、腾讯云 COS、七牛云、Cloudflare R2 等 S3 兼容服务
       </p>
 
-      <div class="pt-4 flex gap-4">
-        <button
-          on:click={handleSaveS3Config}
-          disabled={s3Loading}
-          class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {#if s3Loading}
-            <span>保存中...</span>
-          {:else}
-            保存图床配置
-          {/if}
-        </button>
-        {#if $auth.s3Config}
-          <button
-            on:click={handleClearS3Config}
-            class="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-md transition"
-          >
-            清除配置
-          </button>
-        {/if}
-      </div>
-    </div>
+      {#if s3Error}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+          {s3Error}
+        </div>
+      {/if}
 
-    <!-- 当前 S3 配置状态 -->
-    {#if $auth.s3Config}
-      <div class="mt-6 pt-6 border-t border-gray-200">
-        <h3 class="text-lg font-semibold mb-3">当前图床配置</h3>
-        <div class="bg-gray-50 rounded-md p-4 space-y-2">
-          <p class="text-sm">
-            <span class="font-medium">服务商:</span>
-            <span class="ml-1">{S3_PROVIDERS[$auth.s3Config.provider]?.name || $auth.s3Config.provider}</span>
+      {#if s3Success}
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 text-sm">
+          {s3Success}
+        </div>
+      {/if}
+
+      <div class="space-y-4">
+        <!-- 服务商选择 -->
+        <div>
+          <label for="s3Provider" class="block text-sm font-medium text-gray-700 mb-2">
+            存储服务商
+          </label>
+          <select
+            id="s3Provider"
+            bind:value={s3Config.provider}
+            on:change={handleProviderChange}
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">请选择服务商</option>
+            {#each Object.entries(S3_PROVIDERS) as [key, provider]}
+              <option value={key}>{provider.name}</option>
+            {/each}
+          </select>
+        </div>
+
+        <!-- 区域选择 -->
+        {#if s3Config.provider && S3_PROVIDERS[s3Config.provider]}
+          <div>
+            <label for="s3Region" class="block text-sm font-medium text-gray-700 mb-2">
+              区域
+            </label>
+            {#if S3_PROVIDERS[s3Config.provider].regions.length > 1 || S3_PROVIDERS[s3Config.provider].regions[0].endpoint}
+              <select
+                id="s3Region"
+                bind:value={s3Config.region}
+                on:change={handleRegionChange}
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="">请选择区域</option>
+                {#each S3_PROVIDERS[s3Config.provider].regions as region}
+                  <option value={region.id}>{region.name}</option>
+                {/each}
+              </select>
+            {:else}
+              <input
+                id="s3Region"
+                type="text"
+                bind:value={s3Config.region}
+                placeholder="例如: us-east-1"
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            {/if}
+          </div>
+        {/if}
+
+        <!-- Endpoint -->
+        <div>
+          <label for="s3Endpoint" class="block text-sm font-medium text-gray-700 mb-2">
+            Endpoint
+          </label>
+          <input
+            id="s3Endpoint"
+            type="text"
+            bind:value={s3Config.endpoint}
+            placeholder="例如: s3.us-east-1.amazonaws.com"
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <p class="text-sm text-gray-500 mt-1">
+            S3 服务端点地址（不含 https://）
           </p>
-          <p class="text-sm">
-            <span class="font-medium">区域:</span>
-            <span class="ml-1">{$auth.s3Config.region}</span>
+        </div>
+
+        <!-- Access Key ID -->
+        <div>
+          <label for="s3AccessKeyId" class="block text-sm font-medium text-gray-700 mb-2">
+            Access Key ID
+          </label>
+          <input
+            id="s3AccessKeyId"
+            type="text"
+            bind:value={s3Config.accessKeyId}
+            placeholder="输入 Access Key ID"
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+        </div>
+
+        <!-- Secret Access Key -->
+        <div>
+          <label for="s3SecretAccessKey" class="block text-sm font-medium text-gray-700 mb-2">
+            Secret Access Key
+          </label>
+          <div class="relative">
+            {#if showSecretKey}
+              <input
+                id="s3SecretAccessKey"
+                type="text"
+                bind:value={s3Config.secretAccessKey}
+                placeholder="输入 Secret Access Key"
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 pr-12"
+              />
+            {:else}
+              <input
+                id="s3SecretAccessKey"
+                type="password"
+                bind:value={s3Config.secretAccessKey}
+                placeholder="输入 Secret Access Key"
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 pr-12"
+              />
+            {/if}
+            <button
+              type="button"
+              on:click={() => showSecretKey = !showSecretKey}
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            >
+              {#if showSecretKey}
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd" />
+                  <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                </svg>
+              {:else}
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                  <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                </svg>
+              {/if}
+            </button>
+          </div>
+          <p class="text-sm text-gray-500 mt-1">
+            密钥仅存储在本地浏览器中
           </p>
-          <p class="text-sm">
-            <span class="font-medium">Bucket:</span>
-            <span class="ml-1">{$auth.s3Config.bucket}</span>
+        </div>
+
+        <!-- Bucket -->
+        <div>
+          <label for="s3Bucket" class="block text-sm font-medium text-gray-700 mb-2">
+            Bucket 名称
+          </label>
+          <input
+            id="s3Bucket"
+            type="text"
+            bind:value={s3Config.bucket}
+            placeholder="输入存储桶名称"
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+        </div>
+
+        <!-- 公开访问 URL -->
+        <div>
+          <label for="s3PublicUrl" class="block text-sm font-medium text-gray-700 mb-2">
+            公开访问 URL
+          </label>
+          <input
+            id="s3PublicUrl"
+            type="text"
+            bind:value={s3Config.publicUrl}
+            placeholder="例如: https://cdn.example.com"
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <p class="text-sm text-gray-500 mt-1">
+            图片的公开访问域名（CDN 域名或存储桶公开 URL）
           </p>
-          <p class="text-sm">
-            <span class="font-medium">公开 URL:</span>
-            <span class="ml-1">{$auth.s3Config.publicUrl}</span>
+        </div>
+
+        <!-- 路径前缀 -->
+        <div>
+          <label for="s3PathPrefix" class="block text-sm font-medium text-gray-700 mb-2">
+            路径前缀（可选）
+          </label>
+          <input
+            id="s3PathPrefix"
+            type="text"
+            bind:value={s3Config.pathPrefix}
+            placeholder="例如: blog/images"
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <p class="text-sm text-gray-500 mt-1">
+            上传文件的路径前缀，不需要以 / 开头或结尾
           </p>
-          {#if $auth.s3Config.pathPrefix}
-            <p class="text-sm">
-              <span class="font-medium">路径前缀:</span>
-              <span class="ml-1">{$auth.s3Config.pathPrefix}</span>
-            </p>
-          {/if}
-          {#if $auth.s3Config.urlSuffix}
-            <p class="text-sm">
-              <span class="font-medium">URL 后缀:</span>
-              <span class="ml-1">{$auth.s3Config.urlSuffix}</span>
-            </p>
+        </div>
+
+        <!-- URL 后缀 -->
+        <div>
+          <label for="s3UrlSuffix" class="block text-sm font-medium text-gray-700 mb-2">
+            URL 后缀（可选）
+          </label>
+          <input
+            id="s3UrlSuffix"
+            type="text"
+            bind:value={s3Config.urlSuffix}
+            placeholder="例如: -ys"
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <p class="text-sm text-gray-500 mt-1">
+            图片 URL 后缀，用于 CDN 图片处理样式（如七牛云的 -ys）
+          </p>
+        </div>
+
+        <!-- 路径风格 -->
+        <div class="flex items-center">
+          <input
+            id="s3ForcePathStyle"
+            type="checkbox"
+            bind:checked={s3Config.forcePathStyle}
+            class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+          />
+          <label for="s3ForcePathStyle" class="ml-2 block text-sm text-gray-700">
+            使用路径风格（Path Style）
+          </label>
+        </div>
+        <p class="text-sm text-gray-500 -mt-2 ml-6">
+          MinIO、Cloudflare R2 等需要勾选此选项
+        </p>
+
+        <div class="pt-4 flex gap-4">
+          <button
+            on:click={handleSaveS3Config}
+            disabled={s3Loading}
+            class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {#if s3Loading}
+              <span>保存中...</span>
+            {:else}
+              保存 S3 图床配置
+            {/if}
+          </button>
+          {#if $auth.s3Config}
+            <button
+              on:click={handleClearS3Config}
+              class="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-md transition"
+            >
+              清除配置
+            </button>
           {/if}
         </div>
       </div>
     {/if}
+
+    <!-- 当前生效图床配置概览 -->
+    <div class="mt-6 pt-6 border-t border-gray-200">
+      <h3 class="text-base font-semibold mb-3">当前图床状态</h3>
+      {#if imageStorageProvider === 'github'}
+        <div class="bg-gray-50 rounded-md p-4 space-y-1.5 text-sm">
+          <p><span class="font-medium">存储模式:</span> <span class="ml-1 text-primary-700 font-semibold">GitHub 博客仓库</span></p>
+          <p><span class="font-medium">目标仓库:</span> <span class="ml-1">{$auth.repo ? `${$auth.repo.owner}/${$auth.repo.name}` : '未绑定'}</span></p>
+          <p><span class="font-medium">目录路径:</span> <span class="ml-1 font-mono">{$auth.githubImageConfig?.pathPrefix || 'source/images'}</span></p>
+          <p><span class="font-medium">引用格式:</span> <span class="ml-1 font-mono text-gray-600">/images/YYYY/MM/xxx.png</span></p>
+        </div>
+      {:else if $auth.s3Config}
+        <div class="bg-gray-50 rounded-md p-4 space-y-1.5 text-sm">
+          <p><span class="font-medium">存储模式:</span> <span class="ml-1 text-primary-700 font-semibold">S3 兼容存储 ({S3_PROVIDERS[$auth.s3Config.provider]?.name || $auth.s3Config.provider})</span></p>
+          <p><span class="font-medium">存储桶 (Bucket):</span> <span class="ml-1">{$auth.s3Config.bucket}</span></p>
+          <p><span class="font-medium">公开 URL:</span> <span class="ml-1">{$auth.s3Config.publicUrl}</span></p>
+          {#if $auth.s3Config.pathPrefix}
+            <p><span class="font-medium">路径前缀:</span> <span class="ml-1">{$auth.s3Config.pathPrefix}</span></p>
+          {/if}
+        </div>
+      {:else}
+        <div class="bg-amber-50 border border-amber-200 rounded-md p-4 text-sm text-amber-800">
+          尚未配置 S3 图床，建议切换到「GitHub 博客仓库图床」模式直接使用。
+        </div>
+      {/if}
+    </div>
   </div>
+
 
   <!-- 当前仓库配置 -->
   <div class="bg-white rounded-lg shadow-sm p-6">

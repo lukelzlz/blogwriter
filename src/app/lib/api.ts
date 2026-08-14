@@ -1,5 +1,6 @@
 import { auth } from '$stores/auth';
-import type { Post, CreatePostParams, UpdatePostParams, ApiResponse, ImageUploadParams, ImageUploadResponse, S3Config } from '$shared/types';
+import type { Post, CreatePostParams, UpdatePostParams, ApiResponse, ImageUploadParams, ImageUploadResponse, S3Config, ImageDeleteParams } from '$shared/types';
+
 
 // API 基础 URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -268,10 +269,11 @@ export const imageApi = {
   },
 
   // 删除图片
-  async delete(key: string, config: S3Config): Promise<ApiResponse<{ success: boolean }>> {
+  async delete(params: ImageDeleteParams | { key: string; config?: S3Config; provider?: any; sha?: string }): Promise<ApiResponse<{ success: boolean }>> {
     return request<{ success: boolean }>('/api/upload/delete', {
       method: 'POST',
-      body: JSON.stringify({ key, config }),
+      body: JSON.stringify(params),
     });
   },
 };
+

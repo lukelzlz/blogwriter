@@ -261,10 +261,18 @@
   }
 
   // 图片上传处理
-  async function handleImageUpload(file: Blob, onProgress?: (progress: number) => void): Promise<{ url: string; key: string } | null> {
+  async function handleImageUpload(file: Blob, onProgress?: (progress: number) => void): Promise<{ url: string; key: string; sha?: string } | null> {
+    const provider = $auth.imageStorageProvider || 'github';
     const s3Config = $auth.s3Config;
-    if (!s3Config) {
-      alert('请先在设置页面配置图床');
+    const githubConfig = $auth.githubImageConfig;
+
+    if (provider === 'github' && !$auth.repo) {
+      alert('使用 GitHub 图床需要先在设置页面绑定博客仓库');
+      return null;
+    }
+
+    if (provider === 's3' && !s3Config) {
+      alert('请先在设置页面配置 S3 图床');
       return null;
     }
 
@@ -285,11 +293,13 @@
       const response = await imageApi.upload({
         imageData: base64,
         mimeType: file.type || 'image/png',
-        config: s3Config,
+        provider,
+        config: provider === 's3' ? s3Config! : undefined,
+        githubConfig: provider === 'github' ? githubConfig : undefined,
       }, onProgress);
 
       if (response.success && response.data) {
-        return { url: response.data.url, key: response.data.key };
+        return { url: response.data.url, key: response.data.key, sha: response.data.sha };
       } else {
         console.error('Image upload failed:', response.error);
         alert('图片上传失败: ' + (response.error || '未知错误'));
@@ -303,18 +313,24 @@
   }
 
   // 图片删除处理
-  async function handleImageDelete(key: string): Promise<boolean> {
+  async function handleImageDelete(key: string, sha?: string): Promise<boolean> {
+    const provider = $auth.imageStorageProvider || 'github';
     const s3Config = $auth.s3Config;
-    if (!s3Config) return false;
 
     try {
-      const response = await imageApi.delete(key, s3Config);
+      const response = await imageApi.delete({
+        key,
+        provider,
+        config: provider === 's3' ? (s3Config || undefined) : undefined,
+        sha,
+      });
       return response.success;
     } catch (err) {
       console.error('Image delete error:', err);
       return false;
     }
   }
+
 </script>
 
 <svelte:window on:keydown={handleKeydown} />

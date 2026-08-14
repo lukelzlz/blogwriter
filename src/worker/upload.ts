@@ -1,8 +1,9 @@
-import type { S3Config, ImageUploadParams, ImageUploadResponse } from '../shared/types';
+import type { S3Config, ImageUploadParams, ImageUploadResponse, ImageDeleteParams } from '../shared/types';
 import { validateSession } from './auth';
+import { createOrUpdateBinaryFile, deleteFile, getFileContent } from './github';
 import type { Env } from './index';
 
-// 生成唯一文件名
+// 生成唯一文件名 (S3 传统模式)
 function generateFileName(mimeType: string, pathPrefix: string): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 10);
@@ -17,6 +18,39 @@ function generateFileName(mimeType: string, pathPrefix: string): string {
   }
   const prefix = pathPrefix ? `${pathPrefix.replace(/\/$/, '')}/` : '';
   return `${prefix}${timestamp}-${random}.${ext}`;
+}
+
+// 生成年月分级文件名与 Hexo 相对 URL (GitHub 模式)
+function generateDatePathFileName(mimeType: string, pathPrefix?: string): { filePath: string; relativeUrl: string } {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 10);
+
+  let ext = 'png';
+  if (mimeType.includes('/')) {
+    const parts = mimeType.split('/');
+    ext = parts[1] || 'png';
+    if (ext === 'jpeg') ext = 'jpg';
+    if (ext === 'svg+xml') ext = 'svg';
+  }
+
+  const rawPrefix = (pathPrefix || 'source/images').replace(/^\/+|\/+$/g, '');
+  const subPath = `${year}/${month}/${timestamp}-${random}.${ext}`;
+  const filePath = rawPrefix ? `${rawPrefix}/${subPath}` : subPath;
+
+  // 计算 Hexo 站点的相对引用路径
+  // 如果 rawPrefix 以 source/ 开头，Hexo 生成站点时会把 source/ 移除，例如 source/images -> /images
+  let urlPrefix = rawPrefix;
+  if (urlPrefix.startsWith('source/')) {
+    urlPrefix = urlPrefix.substring('source/'.length);
+  } else if (urlPrefix === 'source') {
+    urlPrefix = '';
+  }
+  const relativeUrl = urlPrefix ? `/${urlPrefix}/${subPath}` : `/${subPath}`;
+
+  return { filePath, relativeUrl };
 }
 
 // 将 ArrayBuffer 转换为十六进制字符串
@@ -343,11 +377,70 @@ export async function handleUpload(
   try {
     // 解析请求体
     const body = await request.json() as ImageUploadParams;
-    const { imageData, mimeType, config } = body;
+    const { imageData, mimeType, config, githubConfig } = body;
+    const provider = body.provider || (config ? 's3' : 'github');
     
     // 验证必要参数
-    if (!imageData || !mimeType || !config) {
+    if (!imageData || !mimeType) {
       return new Response(JSON.stringify({ error: '缺少必要参数' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+    
+    // 验证 MIME 类型
+    if (!mimeType.startsWith('image/')) {
+      return new Response(JSON.stringify({ error: '只允许上传图片文件' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // 处理 GitHub 仓库图床上传
+    if (provider === 'github') {
+      if (!session.repo) {
+        return new Response(JSON.stringify({ error: '未绑定 GitHub 博客仓库，请在设置中选择仓库' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+
+      const { owner, name: repo } = session.repo;
+      const pathPrefix = githubConfig?.pathPrefix || 'source/images';
+      const branch = githubConfig?.branch;
+
+      const { filePath, relativeUrl } = generateDatePathFileName(mimeType, pathPrefix);
+      const cleanBase64 = imageData.replace(/^data:image\/\w+;base64,/, '');
+
+      const fileName = filePath.split('/').pop() || 'image';
+      const commitMessage = `Upload image: ${fileName}`;
+
+      const ghResult = await createOrUpdateBinaryFile(
+        owner,
+        repo,
+        filePath,
+        cleanBase64,
+        commitMessage,
+        session.accessToken,
+        undefined,
+        branch
+      );
+
+      const response: ImageUploadResponse = {
+        url: relativeUrl,
+        key: filePath,
+        sha: ghResult.content.sha,
+      };
+
+      return new Response(JSON.stringify({ data: response }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // 处理 S3 兼容存储上传
+    if (!config) {
+      return new Response(JSON.stringify({ error: '缺少 S3 配置' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
@@ -362,18 +455,9 @@ export async function handleUpload(
       });
     }
     
-    // 验证 MIME 类型
-    if (!mimeType.startsWith('image/')) {
-      return new Response(JSON.stringify({ error: '只允许上传图片文件' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    }
-    
     // 解码 Base64 图片数据
     let imageBuffer: ArrayBuffer;
     try {
-      // 移除可能的 data URL 前缀
       const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
       const binaryString = atob(base64Data);
       const bytes = new Uint8Array(binaryString.length);
@@ -429,12 +513,6 @@ export async function handleUpload(
   }
 }
 
-// 删除请求参数类型
-interface ImageDeleteParams {
-  key: string;
-  config: S3Config;
-}
-
 // 处理删除请求
 export async function handleDelete(
   request: Request,
@@ -470,17 +548,64 @@ export async function handleDelete(
   try {
     // 解析请求体
     const body = await request.json() as ImageDeleteParams;
-    const { key, config } = body;
+    const { key, config, sha } = body;
+    const provider = body.provider || (config ? 's3' : 'github');
     
     // 验证必要参数
-    if (!key || !config) {
-      return new Response(JSON.stringify({ error: '缺少必要参数' }), {
+    if (!key) {
+      return new Response(JSON.stringify({ error: '缺少文件 key / path 参数' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
+
+    // 处理 GitHub 删除
+    if (provider === 'github') {
+      if (!session.repo) {
+        return new Response(JSON.stringify({ error: '未绑定 GitHub 博客仓库' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+
+      const { owner, name: repo } = session.repo;
+      const filePath = key;
+      let fileSha = sha;
+
+      if (!fileSha) {
+        try {
+          const fileInfo = await getFileContent(owner, repo, filePath, session.accessToken);
+          fileSha = fileInfo.sha;
+        } catch (e) {
+          console.warn('Could not find file sha for delete:', e);
+        }
+      }
+
+      if (!fileSha) {
+        return new Response(JSON.stringify({ error: '无法获取要删除的文件 SHA' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+
+      const fileName = filePath.split('/').pop() || 'image';
+      const commitMessage = `Delete image: ${fileName}`;
+      await deleteFile(owner, repo, filePath, commitMessage, session.accessToken, fileSha);
+
+      return new Response(JSON.stringify({ data: { success: true } }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
     
-    // 验证 S3 配置
+    // 处理 S3 删除
+    if (!config) {
+      return new Response(JSON.stringify({ error: '缺少 S3 配置' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
     if (!config.endpoint || !config.region || !config.accessKeyId ||
         !config.secretAccessKey || !config.bucket) {
       return new Response(JSON.stringify({ error: 'S3 配置不完整' }), {

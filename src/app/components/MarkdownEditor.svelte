@@ -8,6 +8,7 @@
   interface UploadResult {
     url: string;
     key: string;
+    sha?: string;
   }
 
   export let content = '';
@@ -15,7 +16,7 @@
   export let readonly = false;
   export let onChange: ((content: string) => void) | undefined = undefined;
   export let onImageUpload: ((file: Blob, onProgress?: (progress: number) => void) => Promise<UploadResult | null>) | undefined = undefined;
-  export let onImageDelete: ((key: string) => Promise<boolean>) | undefined = undefined;
+  export let onImageDelete: ((key: string, sha?: string) => Promise<boolean>) | undefined = undefined;
 
   let editorContainer: HTMLDivElement;
   let wrapperContainer: HTMLDivElement;
@@ -31,7 +32,8 @@
   let showUndoToast = false;
   let undoCountdown = 30;
   let undoTimer: ReturnType<typeof setInterval> | null = null;
-  let lastUploadedImage: { url: string; key: string; markdownText: string } | null = null;
+  let lastUploadedImage: { url: string; key: string; markdownText: string; sha?: string } | null = null;
+
   
   // 移动端快捷键栏相关状态
   let isMobile = false;
@@ -588,7 +590,7 @@
         });
         
         // 显示撤回提示
-        startUndoTimer(result.url, result.key, markdownText);
+        startUndoTimer(result.url, result.key, markdownText, result.sha);
       } else {
         // 上传失败，移除占位符
         const currentContent = editor.getValue();
@@ -624,8 +626,8 @@
   }
 
   // 开始撤回倒计时
-  function startUndoTimer(url: string, key: string, markdownText: string) {
-    lastUploadedImage = { url, key, markdownText };
+  function startUndoTimer(url: string, key: string, markdownText: string, sha?: string) {
+    lastUploadedImage = { url, key, markdownText, sha };
     undoCountdown = 30;
     showUndoToast = true;
     
@@ -651,7 +653,7 @@
   async function handleUndo() {
     if (!lastUploadedImage || !onImageDelete || !editor) return;
     
-    const { key, markdownText } = lastUploadedImage;
+    const { key, markdownText, sha } = lastUploadedImage;
     
     // 1. 从编辑器中移除图片 markdown
     const currentContent = editor.getValue();
@@ -668,7 +670,7 @@
     
     // 2. 删除远程文件
     try {
-      await onImageDelete(key);
+      await onImageDelete(key, sha);
     } catch (error) {
       console.error('Failed to delete image:', error);
     }
