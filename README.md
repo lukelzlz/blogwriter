@@ -1,417 +1,266 @@
-# Hexo 博客管理器
+# BlogWriter - 极简 Hexo 博客管理器
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)
-![Svelte](https://img.shields.io/badge/Svelte-4.2.19-orange.svg)
+![Version](https://img.shields.io/badge/version-1.1.0-black.svg)
+![License](https://img.shields.io/badge/license-MIT-black.svg)
+![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-black.svg)
+![Svelte](https://img.shields.io/badge/Svelte-4.2.19-black.svg)
+![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers%20%26%20Pages-black.svg)
 
-一个基于 Cloudflare Workers 和 Svelte 的 Hexo 博客管理工具，让您可以在移动设备上轻松管理您的 Hexo 博客。
+基于 **Cloudflare Workers + Svelte** 构建的极简高质感 Hexo 博客管理与移动端写作工具。
 
-[功能特性](#功能特性) • [快速开始](#快速开始) • [文档](#文档) • [在线演示](#在线演示)
+[在线体验](https://writer.qwqc.cc) • [功能特性](#-功能特性) • [快速开始](#-快速开始) • [部署指南](#-部署说明) • [API 文档](#-api-文档)
 
 </div>
 
+---
+
 ## 🌐 在线演示
 
-- **前端应用**: [https://writer.qwqc.cc](https://writer.qwqc.cc)
-- **API 服务**: [https://writer-api.qwqc.cc](https://writer-api.qwqc.cc)
+- **前端应用 (Cloudflare Pages)**: [https://writer.qwqc.cc](https://writer.qwqc.cc)
+- **后端服务 (Cloudflare Workers)**: [https://writer-api.qwqc.cc](https://writer-api.qwqc.cc)
 
-## 📖 简介
+---
 
-Hexo 博客管理器是一个现代化的博客管理工具，专为 Hexo 静态博客框架设计。它提供了一个优雅的 Web 界面，让您可以在任何设备上（包括移动设备）轻松创建、编辑和管理您的博客文章。
+## 📖 项目简介
 
-### ✨ 核心优势
+**BlogWriter** 专为 Hexo 静态博客打造，提供现代出版物（Medium / Notion 风格）的高对比黑白极简界面与沉浸式文稿编辑体验。
 
-- 🚀 **零服务器成本** - 部署在 Cloudflare Workers，享受免费额度
-- 📱 **移动端优先** - 专为移动设备优化的响应式设计
-- 🔐 **安全可靠** - 使用 GitHub OAuth 2.0 认证，数据存储在您的仓库
-- ⚡ **全球加速** - Cloudflare 边缘网络，全球访问极速响应
-- 📝 **强大编辑器** - 基于 Ace Editor 的 Markdown 编辑器，支持实时预览
-- 🔄 **自动保存** - 本地自动保存，防止意外丢失
-- 🖼️ **图片上传** - 支持多种 S3 兼容存储（AWS、阿里云、腾讯云等）
-- 📲 **PWA 支持** - 可安装到桌面，支持离线访问
+无论是在手机、平板还是桌面端，您都可以直连 GitHub 仓库随心撰写、管理博文，享受秒级图片上传（支持 GitHub 仓库图床与 S3 / R2 云存储）、本地草稿实时保护以及 PWA 离线安装体验。
+
+---
+
+## ✨ 核心优势
+
+- 🖤 **极简黑白出版物设计** - 告别臃肿后台，采用 Medium / Notion 风格的纯净排版与高对比文字，提供纸质文稿般的专注体验。
+- 📱 **移动端原生级调校** - 适配 iOS 底部安全区，配备经视口与键盘高度精准补偿的**悬浮快捷输入栏**，大触控热区无误触。
+- 🔐 **GitHub 直连与零数据中转** - 基于 GitHub OAuth 2.0 授权，文章增删改查直连个人仓库，无第三方数据库存储用户隐私。
+- 🖼️ **双模图床系统**：
+  - **GitHub 博客仓库图床（推荐）**：零额外成本，按年月自动归档至 `source/images/YYYY/MM/xxx.png`，网站生成即生效。
+  - **S3 / R2 兼容云存储**：支持 Cloudflare R2、AWS S3、阿里云 OSS、腾讯云 COS、七牛云、MinIO 等。
+  - **秒级上传与撤回**：支持拖拽/剪贴板粘贴直传、实时进度显示与 30 秒内一键撤回删除。
+- 🛡️ **本地草稿与状态保全** - 30 秒自动暂存浏览器本地，意外刷新或关闭可一键恢复草稿。
+- ⚡ **全球边缘低延迟与零服务器成本** - 前端部署在 Cloudflare Pages，API 运行在 Cloudflare Workers，享受全球边缘网络与免费额度。
+- 📲 **PWA 桌面/移动端安装** - 支持添加至手机主屏幕或桌面端独立运行，支持离线缓存与应用更新自动提醒。
+- 🔄 **跨设备一键配置同步** - 支持仓库与图床配置的 Base64 编码导出与一键导入。
+
+---
 
 ## 🎯 功能特性
 
-### 核心功能
+### 1. 文章管理
+- ✅ **文章列表**：流式排版展示所有博文，支持文件名/发布日期/文件体积清晰展示。
+- ✅ **创建与编辑**：无边框文稿大标题设计，搭配 Ace Editor Markdown 语法高亮与流畅排版。
+- ✅ **删除确认**：极简毛玻璃二次确认弹窗，防止误删线上文章。
+- ✅ **Hexo 格式兼容**：自动解析与保持 Front-Matter 头部元数据（Title、Date、Tags、Categories 等）。
 
-- ✅ **GitHub OAuth 认证** - 安全的 GitHub 账户登录和授权
-- ✅ **文章管理** - 创建、编辑、删除文章
-- ✅ **Markdown 编辑器** - 基于 Ace Editor 的强大编辑器
-- ✅ **实时预览** - 即时查看 Markdown 渲染效果
-- ✅ **自动保存** - 本地自动保存，手动提交到 GitHub
-- ✅ **Hexo 优化** - 自动生成 front-matter 和格式化文件名
-- ✅ **移动端友好** - 响应式设计，完美支持移动设备
-- ✅ **离线编辑** - 支持本地草稿恢复
-- ✅ **PWA 支持** - 可安装到桌面，支持离线访问
-- ✅ **图片上传** - 支持拖拽上传和粘贴上传图片
-- ✅ **S3 兼容存储** - 支持 AWS S3、阿里云 OSS、腾讯云 COS、七牛云、Cloudflare R2 等
+### 2. 写作与编辑器
+- 🎨 **语法高亮与排版**：Markdown 语法实时着色与换行自适应。
+- 📋 **图片粘贴秒传**：支持截屏后直接 `Ctrl/Cmd + V` 粘贴上传插入。
+- 🖱️ **图片拖拽上传**：拖拽图片进入编辑器区域自动触发上传。
+- ⌨️ **快捷键支持**：支持 `Ctrl/Cmd + S` 快捷保存、标准 Markdown 标记包裹。
+- 📱 **移动端键盘快捷栏**：集成 `#`、`**`、`*`、`` ` ``、`代码块`、`链接`、`图片`、`列表`、`引用`、`删除线`、`分割线` 以及 iOS 专用粘贴/选图辅助。
 
-### 编辑器功能
+### 3. 图床存储
+- 📦 **GitHub 仓库图床**：无需额外配置第三方存储桶，随博客源码一同版本管理。
+- ☁️ **S3 兼容存储**：预设主流服务商端点，支持自定义 Endpoint、Bucket、CDN 域名、路径前缀与图片处理后缀。
+- ⏱️ **30s 撤回删除**：上传后弹出极简黑底胶囊，30 秒内点击「撤回」可自动清除编辑器 Markdown 并从远程存储删除图片。
 
-- 🎨 **语法高亮** - Markdown 语法实时高亮
-- 🔍 **搜索替换** - 快速查找和替换文本
-- 📋 **剪贴板支持** - 支持粘贴图片自动上传
-- 🖱️ **拖拽上传** - 拖拽图片到编辑器自动上传
-- ⌨️ **快捷键支持** - 常用 Markdown 语法快捷键
-- 📱 **移动端快捷栏** - 专为移动端设计的快捷输入工具
+---
 
-### 存储功能
+## 🛠️ 技术架构
 
-- 📦 **多种云存储** - 支持 8+ 种 S3 兼容存储服务
-- 🗂️ **路径前缀** - 支持自定义存储路径
-- 🌐 **CDN 支持** - 支持自定义 CDN 域名
-- 📊 **上传进度** - 实时显示上传进度
-- ↩️ **撤回功能** - 上传后 30 秒内可撤回删除
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    BlogWriter 前端应用                       │
+│       Svelte 4 + Tailwind CSS + Ace Editor + Vite (PWA)     │
+│                 (部署于 Cloudflare Pages)                    │
+└───────────────┬─────────────────────────────┬───────────────┘
+                │                             │
+        GitHub OAuth / API              S3 上传 / 删除
+                │                             │
+┌───────────────▼─────────────────────────────▼───────────────┐
+│                 BlogWriter 后端 API 服务                     │
+│               Cloudflare Workers + KV 存储                  │
+│       (处理 OAuth 鉴权、GitHub 代理交互、S3 SigV4 签名)       │
+└───────────────┬─────────────────────────────┬───────────────┘
+                │                             │
+    ┌───────────▼───────────┐     ┌───────────▼───────────┐
+    │     GitHub REST API   │     │  Cloudflare R2 / S3   │
+    │  (用户 Hexo 博客仓库)  │     │       (云存储图床)     │
+    └───────────────────────┘     └───────────────────────┘
+```
 
-## 🛠️ 技术栈
-
-### 后端
-
-- **Cloudflare Workers** - 边缘计算平台
-- **TypeScript** - 类型安全的 JavaScript
-- **GitHub REST API** - GitHub 仓库操作
-- **GitHub OAuth 2.0** - 用户认证
-- **Cloudflare KV** - 会话存储
-- **AWS Signature V4** - S3 兼容存储签名
-
-### 前端
-
-- **Svelte 4** - 现代化的前端框架
-- **Tailwind CSS** - 实用优先的 CSS 框架
-- **Ace Editor** - 强大的代码编辑器
-- **marked.js** - Markdown 解析和渲染
-- **Vite** - 快速的构建工具
-- **vite-plugin-pwa** - PWA 支持
-
-### 存储
-
-- **Cloudflare KV** - 会话管理
-- **localStorage** - 草稿存储
-- **S3 兼容存储** - 图片存储
+---
 
 ## 🚀 快速开始
 
-### 前置要求
-
+### 前置准备
 - Node.js 18+
-- npm 或 yarn
-- Cloudflare 账户
-- GitHub 账户
+- GitHub 账号
+- Cloudflare 账号（已安装 [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/)）
 
-### 安装
+### 1. 本地克隆与依赖安装
 
 ```bash
-# 克隆仓库
-git clone https://github.com/your-username/blogwriter.git
+git clone https://github.com/lukelzlz/blogwriter.git
 cd blogwriter
 
-# 安装依赖
 npm install
 ```
 
-### 配置
+### 2. 创建 GitHub OAuth App
 
-#### 1. 创建 GitHub OAuth App
+前往 [GitHub Developer Settings -> OAuth Apps](https://github.com/settings/developers) 创建应用：
 
-访问 [GitHub Developer Settings](https://github.com/settings/developers) 创建新的 OAuth App：
+- **Application name**: `BlogWriter`
+- **Homepage URL**: `https://writer.qwqc.cc`（或你的前端 Pages 域名）
+- **Authorization callback URL**: `https://writer-api.qwqc.cc/auth/callback`（或你的 Worker API 域名 `/auth/callback`）
 
-- **Application name**: `Hexo Blog Manager`
-- **Homepage URL**: `https://your-domain.workers.dev`
-- **Authorization callback URL**: `https://your-api-domain.workers.dev/auth/callback`
+保存生成的 `Client ID` 与 `Client Secret`。
 
-记录下 `Client ID` 和 `Client Secret`。
+### 3. 配置 Cloudflare KV 命名空间
 
-#### 2. 创建 Cloudflare KV Namespace
+创建用于保存用户 OAuth Session 的 KV 命名空间：
 
 ```bash
 npx wrangler kv:namespace create SESSIONS
 ```
 
-记录下输出的 `id` 值。
+将返回的 `id` 填入 `wrangler.toml` 中的 `kv_namespaces` 配置项。
 
-#### 3. 配置 wrangler.toml
+### 4. 配置环境变量与密钥
 
-更新 `wrangler.toml` 中的配置：
+修改 `wrangler.toml`：
 
 ```toml
+name = "blogwriter"
+main = "src/worker/index.ts"
+compatibility_date = "2026-01-01"
+
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "your-kv-namespace-id"
-preview_id = "your-preview-kv-namespace-id"
+id = "你的_KV_NAMESPACE_ID"
 
 [vars]
-GITHUB_CLIENT_ID = "your-github-client-id"
-GITHUB_REDIRECT_URI = "https://your-api-domain.workers.dev/auth/callback"
+GITHUB_CLIENT_ID = "你的_GITHUB_CLIENT_ID"
+GITHUB_REDIRECT_URI = "https://你的_API_域名/auth/callback"
+FRONTEND_URL = "https://你的_前端_域名"
 ```
 
-#### 4. 设置 GitHub Client Secret
+设置 Client Secret 安全变量：
 
 ```bash
 npx wrangler secret put GITHUB_CLIENT_SECRET
+# 输入你的 GitHub Client Secret
 ```
 
-粘贴您的 GitHub Client Secret 并按回车。
-
-### 开发
+### 5. 本地开发调试
 
 ```bash
-# 启动前端开发服务器
+# 终端 1：启动前端开发服务
 npm run dev
 
-# 启动 Workers 开发服务器（另一个终端）
+# 终端 2：启动 Worker 本地服务
 npm run wrangler:dev
 ```
 
-访问 `http://localhost:5173` 查看前端。
+打开浏览器访问 `http://localhost:5173`。
 
-### 部署
+---
 
-```bash
-# 登录 Cloudflare
-npx wrangler login
+## 🚢 部署说明
 
-# 部署 Worker（API 服务）
-wrangler deploy
-# 或
-npm run deploy:worker
+### 一键构建与部署
 
-# 构建前端
-npm run build
-
-# 部署 Pages（前端）
-npm run deploy:pages
-# 或
-npm run deploy
-```
-
-### 快速部署
-
-使用项目提供的部署脚本一键完成所有部署步骤：
+项目内置了自动化部署脚本：
 
 ```bash
 bash builddeploy.sh
 ```
 
-该脚本会按顺序执行：
-1. 部署 Worker（API 服务）
-2. 构建前端
-3. 部署 Pages（前端）
+### 分步手动部署
 
-## 📚 文档
+```bash
+# 1. 部署后端 Worker API 服务
+npm run deploy:worker
 
-- [部署指南](docs/DEPLOYMENT.md) - 详细的部署步骤和配置说明
-- [使用说明](docs/USAGE.md) - 完整的使用教程和功能介绍
-- [技术方案](plans/hexo-blog-manager-plan.md) - 项目架构和设计思路
+# 2. 构建前端静态资源与 PWA ServiceWorker
+npm run build
 
-## 💡 使用说明
+# 3. 部署前端至 Cloudflare Pages
+npm run deploy:pages
+```
 
-### 登录
+---
 
-1. 点击"使用 GitHub 登录"按钮
-2. 授权应用访问您的 GitHub 仓库
-3. 登录成功后，您可以开始管理博客
-
-### 创建文章
-
-1. 点击"新建文章"
-2. 输入文章标题
-3. 使用 Markdown 编辑器编写内容
-4. 实时预览渲染效果
-5. 点击"保存"按钮提交到 GitHub
-
-### 编辑文章
-
-1. 在文章列表中点击编辑按钮
-2. 修改内容
-3. 点击"保存"按钮更新文章
-
-### 图片上传
-
-1. 在编辑器中拖拽图片
-2. 或粘贴图片（Ctrl/Cmd + V）
-3. 图片自动上传到配置的 S3 存储
-4. 自动插入 Markdown 图片语法
-
-### 自动保存
-
-- 编辑器会每 30 秒自动保存到浏览器本地存储
-- 失去焦点时也会自动保存
-- 只有点击"保存"按钮才会提交到 GitHub
-- 下次打开时会提示恢复未保存的草稿
-
-## 📁 项目结构
+## 📁 目录结构
 
 ```
 blogwriter/
 ├── src/
-│   ├── worker/              # Cloudflare Workers 后端
-│   │   ├── index.ts         # Worker 入口，路由分发
-│   │   ├── auth.ts          # GitHub OAuth 认证逻辑
-│   │   ├── github.ts        # GitHub API 封装
-│   │   ├── posts.ts         # 文章 CRUD 操作
-│   │   └── upload.ts        # S3 图片上传（AWS Signature V4）
-│   ├── app/                 # Svelte 前端
-│   │   ├── components/      # UI 组件
-│   │   │   ├── Header.svelte
-│   │   │   ├── MarkdownEditor.svelte
-│   │   │   ├── PreviewPane.svelte
-│   │   │   ├── PostList.svelte
-│   │   │   └── LoginButton.svelte
-│   │   ├── routes/          # 页面路由
-│   │   │   ├── +page.svelte         # 首页（文章列表）
-│   │   │   ├── login/+page.svelte   # 登录页
-│   │   │   ├── new/+page.svelte     # 新建文章
-│   │   │   ├── edit/[slug]/+page.svelte  # 编辑文章
-│   │   │   └── settings/+page.svelte # 设置页（S3 配置）
-│   │   ├── stores/          # Svelte stores
-│   │   │   ├── auth.ts      # 认证状态管理
-│   │   │   ├── editor.ts    # 编辑器状态管理
-│   │   │   └── posts.ts     # 文章列表状态
-│   │   ├── lib/             # 工具函数
-│   │   │   ├── api.ts       # API 请求封装
-│   │   │   ├── hexo.ts      # Hexo 相关工具
-│   │   │   ├── pwa.ts       # PWA 更新检测
-│   │   │   ├── s3-presets.ts # S3 服务商预设
-│   │   │   └── utils.ts     # 通用工具函数
-│   │   ├── App.svelte       # 主应用组件（路由）
-│   │   ├── main.ts          # 应用入口
-│   │   └── app.css          # 全局样式
-│   └── shared/              # 共享类型定义
-│       └── types.ts         # TypeScript 类型
-├── docs/                    # 文档
-│   ├── DEPLOYMENT.md
-│   └── USAGE.md
-├── plans/                   # 计划文档
-│   ├── hexo-blog-manager-plan.md
-│   └── image-upload-s3.md
-├── public/                  # 静态资源（PWA 图标）
-│   ├── favicon.ico
-│   ├── pwa-64x64.png
-│   ├── pwa-192x192.png
-│   └── pwa-512x512.png
-├── wrangler.toml            # Cloudflare Workers 配置
-├── vite.config.ts           # Vite 配置（含 PWA）
-├── package.json             # 项目依赖
-├── tsconfig.json            # TypeScript 配置
-├── tailwind.config.js       # Tailwind CSS 配置
-├── README.md                # 项目说明
-├── CHANGELOG.md             # 更新日志
-└── LICENSE                  # MIT 许可证
+│   ├── worker/                  # Cloudflare Workers 后端
+│   │   ├── index.ts             # Worker 路由分发入口
+│   │   ├── auth.ts              # GitHub OAuth 鉴权与 Session 管理
+│   │   ├── github.ts            # GitHub Contents / Repos API 封装
+│   │   ├── posts.ts             # Hexo 文章增删改查核心逻辑
+│   │   └── upload.ts            # S3 / GitHub 图床上传及删除 (AWS SigV4)
+│   ├── app/                     # Svelte 4 响应式前端
+│   │   ├── components/          # UI 组件库
+│   │   │   ├── Header.svelte         # 磨砂极简吸顶导航栏
+│   │   │   ├── MarkdownEditor.svelte # Ace 编辑器与移动端直角快捷栏
+│   │   │   ├── PostList.svelte       # Medium 风格文章流与删除弹窗
+│   │   │   ├── LoginButton.svelte    # 黑白高质感 GitHub 登录按钮
+│   │   │   └── PreviewPane.svelte    # 渲染预览容器
+│   │   ├── routes/              # 页面视图
+│   │   │   ├── +page.svelte          # 首页 / 文章列表 / 未登录 Landing
+│   │   │   ├── new/+page.svelte      # 纸质文稿新建文章页
+│   │   │   ├── edit/[slug]/+page.svelte # 文章编辑与草稿恢复页
+│   │   │   └── settings/+page.svelte # 仓库配置 / 图床服务 / 导入导出
+│   │   ├── stores/              # 状态管理 (auth, editor, posts)
+│   │   ├── lib/                 # API 封装、Hexo 解析器、S3 服务商预设、PWA 控制器
+│   │   ├── App.svelte           # 顶层布局容器与全局路由分发
+│   │   ├── app.css              # 全局排版、微动画与编辑器样式覆盖
+│   │   └── main.ts              # Svelte 挂载入口
+│   └── shared/                  # 前后端共享 TypeScript 类型
+├── public/                      # 黑白极简 PWA 图标与 Manifest 静态资源
+├── wrangler.toml                # Cloudflare Workers 部署配置
+├── vite.config.ts               # Vite 5 & PWA 生产构建配置
+├── tailwind.config.js           # 极简黑白单色调与字距扩展
+├── builddeploy.sh               # 一键打包与双端发布脚本
+└── README.md
 ```
-
-## 🔌 API 文档
-
-### 认证
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/auth/github` | 获取 GitHub OAuth 授权 URL |
-| GET | `/auth/callback` | OAuth 回调处理 |
-| GET | `/auth/user` | 获取当前用户信息 |
-| POST | `/auth/logout` | 登出 |
-
-### 文章管理
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/posts` | 获取文章列表 |
-| GET | `/api/posts/:path` | 获取文章详情 |
-| POST | `/api/posts` | 创建新文章 |
-| PUT | `/api/posts/:path` | 更新文章 |
-| DELETE | `/api/posts/:path` | 删除文章 |
-
-### 仓库管理
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/repo` | 获取仓库信息 |
-| GET | `/api/repo/branches` | 获取分支列表 |
-
-### 图片上传
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/upload` | 上传图片到 S3 存储 |
-| POST | `/api/upload/delete` | 删除 S3 存储中的图片 |
-
-## ⚙️ 环境变量
-
-| 变量名 | 说明 | 必需 |
-|--------|------|------|
-| `GITHUB_CLIENT_ID` | GitHub OAuth App Client ID | 是 |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth App Client Secret | 是 |
-| `GITHUB_REDIRECT_URI` | OAuth 回调 URL | 是 |
-
-### S3 配置（用户级）
-
-在设置页面配置图片上传的 S3 存储：
-
-| 配置项 | 说明 |
-|--------|------|
-| `provider` | 服务商标识（aws, aliyun, tencent, qiniu, r2, minio, custom） |
-| `endpoint` | S3 endpoint URL |
-| `region` | 区域 |
-| `accessKeyId` | Access Key ID |
-| `secretAccessKey` | Secret Access Key |
-| `bucket` | 存储桶名称 |
-| `publicUrl` | 公开访问 URL 前缀（CDN 域名） |
-| `pathPrefix` | 路径前缀，如 blog/images |
-| `forcePathStyle` | 是否使用路径风格（MinIO 等需要） |
-| `urlSuffix` | URL 后缀，如 -ys（用于 CDN 图片处理样式） |
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-### 开发流程
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
-
-### 代码规范
-
-- 使用 TypeScript 进行类型检查
-- 遵循 ESLint 规则
-- 编写清晰的提交信息
-- 添加必要的注释
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
-
-## 🙏 致谢
-
-- [Svelte](https://svelte.dev/) - 现代化的前端框架
-- [Cloudflare Workers](https://workers.cloudflare.com/) - 边缘计算平台
-- [Ace Editor](https://ace.c9.io/) - 强大的代码编辑器
-- [Tailwind CSS](https://tailwindcss.com/) - 实用优先的 CSS 框架
-- [Hexo](https://hexo.io/) - 快速、简洁且高效的博客框架
-- [marked.js](https://marked.js.org/) - Markdown 解析器
-
-## 📞 支持
-
-如有问题，请：
-
-- 提交 [GitHub Issue](https://github.com/lukelzlz/blogwriter/issues)
-- 查看 [文档](docs/)
-- 联系维护者
-
-## 🌟 Star History
-
-如果这个项目对您有帮助，请给我们一个 Star ⭐️
 
 ---
 
-<div align="center">
+## 🔌 API 文档
 
-Made with ❤️ for Hexo bloggers
+### 认证接口 (Auth)
+| 方法 | 路径 | 描述 |
+| :--- | :--- | :--- |
+| `GET` | `/auth/github` | 获取 GitHub OAuth 授权跳转 URL |
+| `GET` | `/auth/callback` | 处理 OAuth 回调，换取 Token 并建立 Session |
+| `GET` | `/auth/user` | 获取当前已认证的用户基本信息 |
+| `POST` | `/auth/logout` | 销毁当前会话 Session |
 
-[⬆ 回到顶部](#hexo-博客管理器)
+### 文章接口 (Posts)
+| 方法 | 路径 | 描述 |
+| :--- | :--- | :--- |
+| `GET` | `/api/posts` | 获取指定仓库与路径下的 Hexo 文章列表 |
+| `GET` | `/api/posts/:path` | 获取单篇文章正文与 Front-Matter 元信息 |
+| `POST` | `/api/posts` | 创建并提交新文章至 GitHub 仓库 |
+| `PUT` | `/api/posts/:path` | 更新现有文章内容并更新 SHA |
+| `DELETE` | `/api/posts/:path` | 从 GitHub 仓库删除指定文章 |
 
-</div>
+### 图床与上传接口 (Upload)
+| 方法 | 路径 | 描述 |
+| :--- | :--- | :--- |
+| `POST` | `/api/upload` | 上传图片（支持 GitHub 仓库写入或 S3 存储桶直传） |
+| `POST` | `/api/upload/delete` | 撤回删除已上传的图片文件 |
+
+---
+
+## 📄 开源许可证
+
+本项目基于 [MIT 许可证](LICENSE) 开源。
