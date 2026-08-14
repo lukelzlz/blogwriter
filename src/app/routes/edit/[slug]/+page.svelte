@@ -394,8 +394,8 @@
             content={$editor.content}
             placeholder="开始编写你的文章..."
             onChange={(content) => editor.setContent(content)}
-            onImageUpload={$auth.s3Config ? handleImageUpload : undefined}
-            onImageDelete={$auth.s3Config ? handleImageDelete : undefined}
+            onImageUpload={($auth.imageStorageProvider === 'github' && $auth.repo) || ($auth.imageStorageProvider === 's3' && $auth.s3Config) ? handleImageUpload : undefined}
+            onImageDelete={($auth.imageStorageProvider === 'github' && $auth.repo) || ($auth.imageStorageProvider === 's3' && $auth.s3Config) ? handleImageDelete : undefined}
           />
         </div>
       </div>
